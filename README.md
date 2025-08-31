@@ -1,73 +1,80 @@
-# Welcome to your Lovable project
+# Runaro - Running Game Application
 
-## Project info
+A gamified running application with Strava integration, built with modern web technologies.
 
-**URL**: https://lovable.dev/projects/abafb228-210e-4e72-bcff-25503a535518
+## 🏃‍♂️ Features
 
-## How can I edit this code?
+- **Strava Integration**: Connect your Strava account to import running activities
+- **Gamification**: Earn points for your running activities
+- **Activity Transfer**: Select and transfer specific activities to the game
+- **User Authentication**: Secure user management with Supabase
+- **Responsive Design**: Works on desktop and mobile devices
 
-There are several ways of editing your application.
+## 🚀 Live Application
 
-**Use Lovable**
+- **Production**: https://runaro.dk
+- **Debug Interface**: https://runaro.dk/debug/strava
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/abafb228-210e-4e72-bcff-25503a535518) and start prompting.
+## 🛠 Technologies Used
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: Vite + React + TypeScript
+- **UI**: shadcn-ui + Tailwind CSS  
+- **Backend**: Supabase (Database + Edge Functions)
+- **Deployment**: Cloudflare Pages
+- **Integration**: Strava OAuth API
 
-**Use your preferred IDE**
+## 🏗 Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Clone the repository
+git clone https://github.com/jenswahlerslife/runaro.git
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# Navigate to project directory
+cd runaro
 
-Follow these steps:
+# Install dependencies
+npm install
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 📁 Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+├── src/                    # React application source
+├── supabase/              # Database migrations & edge functions
+├── public/                # Static assets
+├── DEPLOYMENT_GUIDE.md    # Production deployment guide
+└── INTEGRATION_STATUS.md  # Strava integration documentation
+```
 
-**Use GitHub Codespaces**
+## 🔧 Development
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The application includes comprehensive debugging tools:
 
-## What technologies are used for this project?
+- React Debug Interface: `/debug/strava`
+- HTML Test Suite: `/test-strava-integration.html`
+- Flow Test Page: `/FLOW_FIXED_TEST.html`
 
-This project is built with:
+## 🚀 Deployment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
 
-## How can I deploy this project?
+Critical: The `public/_redirects` file is essential for Strava OAuth callbacks to work correctly on Cloudflare Pages.
 
-Simply open [Lovable](https://lovable.dev/projects/abafb228-210e-4e72-bcff-25503a535518) and click on Share -> Publish.
+## 📋 Strava Integration
 
-## Can I connect a custom domain to my Lovable project?
+Complete OAuth 2.0 flow with:
+- Secure state-based redirects
+- Automatic token refresh
+- Activity filtering (running only)
+- Point calculation system
+- Database persistence
 
-Yes, you can!
+## 🤝 Contributing
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project was built with assistance from Claude Code for rapid development and debugging.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
+**Built with ❤️ for the running community**
