@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ interface StravaActivity {
 }
 
 const StravaSuccess = () => {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<StravaActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [transferring, setTransferring] = useState<number | null>(null);
@@ -34,16 +36,19 @@ const StravaSuccess = () => {
       if (!user) return;
 
       try {
+        console.log('Calling strava-activities function...');
         // Call edge function to get recent activities
         const { data, error } = await supabase.functions.invoke('strava-activities', {
           body: { limit: 10 }
         });
 
+        console.log('Strava activities response:', { data, error });
+
         if (error) {
           console.error('Error fetching activities:', error);
           toast({
             title: "Fejl",
-            description: "Kunne ikke hente dine løberuter fra Strava",
+            description: `Kunne ikke hente dine løberuter fra Strava: ${error.message}`,
             variant: "destructive",
           });
           return;
@@ -90,11 +95,17 @@ const StravaSuccess = () => {
 
       toast({
         title: "Aktivitet overført!",
-        description: `"${activity.name}" er nu tilføjet til spillet`,
+        description: `"${activity.name}" er nu tilføjet til spillet. Sender dig til kortet...`,
       });
 
       // Remove transferred activity from list
       setActivities(prev => prev.filter(a => a.id !== activity.id));
+
+      // Redirect to map page to see the territory
+      setTimeout(() => {
+        console.log('Redirecting to /map to show territory...');
+        navigate('/map');
+      }, 1500);
     } catch (error: any) {
       console.error('Transfer error:', error);
       toast({
@@ -235,7 +246,7 @@ const StravaSuccess = () => {
         {/* Navigation */}
         <div className="mt-8 text-center">
           <Button 
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => navigate('/dashboard')}
             variant="outline"
             className="border-gray-300 hover:bg-gray-50"
           >

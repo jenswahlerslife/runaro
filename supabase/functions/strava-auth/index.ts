@@ -75,21 +75,48 @@ Deno.serve(async (req) => {
     console.log('Processing for userId:', userId);
 
     // Strava token exchange
-    console.log('Exchanging code for tokens...');
+    const REDIRECT_URI = 'https://runaro.dk/auth/strava/callback';
+    console.log('Exchanging code for tokens...', {
+      endpoint: 'https://www.strava.com/oauth/token',
+      client_id: STRAVA_CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      has_code: !!code
+    });
+    
+    const form = new URLSearchParams();
+    form.set('client_id', STRAVA_CLIENT_ID);
+    form.set('client_secret', STRAVA_CLIENT_SECRET);
+    form.set('code', code);
+    form.set('grant_type', 'authorization_code');
+    form.set('redirect_uri', REDIRECT_URI);
+
+    console.log('DEBUG - Form data being sent:', {
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET.substring(0, 8) + '...',
+      code: code.substring(0, 8) + '...',
+      grant_type: 'authorization_code',
+      redirect_uri: REDIRECT_URI,
+      form_body: form.toString()
+    });
+
     const tokenResp = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: STRAVA_CLIENT_ID,
-        client_secret: STRAVA_CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-      }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
     });
 
     if (!tokenResp.ok) {
       const txt = await tokenResp.text().catch(() => '');
-      console.error('Strava token exchange failed:', tokenResp.status, txt);
+      console.error('Strava token exchange failed:', {
+        status: tokenResp.status,
+        statusText: tokenResp.statusText,
+        client_id_used: STRAVA_CLIENT_ID,
+        redirect_uri_used: REDIRECT_URI,
+        endpoint: 'https://www.strava.com/oauth/token',
+        content_type_sent: 'application/x-www-form-urlencoded',
+        response_body: txt,
+        form_data_sent: 'client_id, client_secret, code, grant_type, redirect_uri'
+      });
       return new Response(
         JSON.stringify({ error: `Strava token exchange failed: ${tokenResp.status} ${txt}` }),
         { status: 502, headers }

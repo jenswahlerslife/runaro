@@ -1,19 +1,37 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import StravaConnect from '@/components/StravaConnect';
-import { Upload as UploadIcon, CheckCircle, FileText } from 'lucide-react';
+import { Upload as UploadIcon, CheckCircle, FileText, ArrowRight } from 'lucide-react';
 
 const Upload = () => {
+  console.log('🚀 Upload component rendered');
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [hasStravaConnection, setHasStravaConnection] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       checkStravaConnection();
     }
   }, [user]);
+
+  // Auto-redirect when Strava is connected
+  useEffect(() => {
+    console.log('Upload useEffect triggered:', { hasStravaConnection, loading, user: !!user });
+    if (hasStravaConnection && !loading) {
+      console.log('Strava connected, redirecting to /strava/success in 2 seconds...');
+      const timer = setTimeout(() => {
+        console.log('Executing redirect to /strava/success');
+        navigate('/strava/success');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasStravaConnection, loading, navigate]);
 
   const checkStravaConnection = async () => {
     try {
@@ -25,9 +43,13 @@ const Upload = () => {
 
       if (error) throw error;
       
-      setHasStravaConnection(!!profile?.strava_access_token);
+      const connected = !!profile?.strava_access_token;
+      console.log('Strava connection check:', connected);
+      setHasStravaConnection(connected);
     } catch (error) {
       console.error('Error checking Strava connection:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,12 +83,16 @@ const Upload = () => {
           <div className="flex justify-center animate-fade-in">
             <div className="max-w-lg w-full">
               <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border-2 border-yellow-400/30">
-                <StravaConnect onConnected={checkStravaConnection} />
+                <StravaConnect onConnected={() => {
+                console.log('StravaConnect onConnected triggered');
+                setHasStravaConnection(true);
+                setLoading(false);
+              }} />
               </div>
             </div>
           </div>
         ) : (
-          // Connected State - Success Message
+          // Connected State - Success Message with auto-redirect
           <div className="max-w-2xl mx-auto">
             {/* Success Card */}
             <Card className="shadow-2xl border-0 bg-gradient-to-r from-green-400 to-emerald-500 mb-8 animate-scale-in rounded-3xl overflow-hidden">
@@ -80,8 +106,18 @@ const Upload = () => {
                       Strava Forbundet!
                     </h3>
                     <p className="text-green-100 text-xl drop-shadow">
-                      Dine aktiviteter importeres automatisk fra Strava
+                      Sender dig videre til dine aktiviteter...
                     </p>
+                    <div className="mt-4">
+                      <Button 
+                        onClick={() => navigate('/strava/success')}
+                        className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        size="lg"
+                      >
+                        <span>Gå til mine aktiviteter</span>
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="p-3 rounded-2xl bg-white/20 backdrop-blur">
                     <svg className="w-16 h-16" viewBox="0 0 24 24" fill="white">
