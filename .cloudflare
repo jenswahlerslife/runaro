@@ -1,0 +1,5 @@
+# Force Cloudflare Pages to use npm
+# This file forces a fresh deployment 
+BUILD_TIMESTAMP=2025-08-31T13:22:00Z
+FORCE_NPM=true
+NO_BUN=true
