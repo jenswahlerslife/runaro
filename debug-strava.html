@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Strava OAuth</title>
+</head>
+<body>
+    <h1>Debug Strava OAuth</h1>
+    
+    <button id="start-oauth">Start OAuth Flow</button>
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('start-oauth').onclick = function() {
+            const clientId = '174654';
+            const redirectUri = 'https://runaro.dk/auth/strava/callback';
+            const scope = 'read,activity:read_all';
+            const state = 'debug-test-' + Date.now();
+            
+            const oauthUrl = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&approval_prompt=force&scope=${scope}&state=${state}`;
+            
+            document.getElementById('result').innerHTML = `
+                <p><strong>OAuth URL:</strong></p>
+                <p><a href="${oauthUrl}" target="_blank">Click here to authorize</a></p>
+                <p><strong>State:</strong> ${state}</p>
+                <p>After authorization, you'll be redirected to runaro.dk with a code parameter.</p>
+            `;
+        };
+    </script>
+</body>
+</html>

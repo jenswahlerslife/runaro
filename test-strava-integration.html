@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Strava Integration Test Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+            color: #2d3748;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 { 
+            font-size: 2.8em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        .test-card {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .test-card h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px 8px 8px 0;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(72, 187, 120, 0.3);
+        }
+        .test-button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .oauth-button {
+            background: linear-gradient(135deg, #fc4c02 0%, #e63c00 100%);
+        }
+        .oauth-button:hover {
+            box-shadow: 0 8px 20px rgba(252, 76, 2, 0.3);
+        }
+        .response-area {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            margin: 15px 0;
+            overflow-x: auto;
+            min-height: 120px;
+            white-space: pre-wrap;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-ok { background: #c6f6d5; color: #22543d; }
+        .status-error { background: #fed7d7; color: #742a2a; }
+        .status-pending { background: #bee3f8; color: #2a4365; }
+        .info-panel {
+            background: #edf2f7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #4299e1;
+        }
+        .flow-diagram {
+            background: #f0fff4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #38a169;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Strava Integration Test Suite</h1>
+            <p class="subtitle">Standalone HTML debugger - Bypasser router problemer</p>
+            <div id="environment-info">
+                <span>Environment: <strong id="env-type">Development</strong></span>
+                <span class="status-badge status-pending" id="server-status">Checking...</span>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>📋 Test Sequence</h3>
+            <div class="flow-diagram">
+1. Generate OAuth URL (requires user ID input)
+2. Test Edge Functions (strava-auth, strava-activities, transfer-activity)
+3. Validate responses and error handling
+4. Test complete OAuth flow manually via "Start OAuth"
+            </div>
+        </div>
+
+        <div class="test-grid">
+            <!-- OAuth URL Generation -->
+            <div class="test-card">
+                <h3>🔗 OAuth URL Generation</h3>
+                <div class="input-group">
+                    <label for="user-id">User ID (required for state generation):</label>
+                    <input type="text" id="user-id" placeholder="Enter user ID for testing...">
+                </div>
+                <button class="test-button oauth-button" onclick="generateOAuthUrl()">Generate OAuth URL</button>
+                <button class="test-button" onclick="startOAuthFlow()" id="start-oauth" disabled>Start OAuth Flow</button>
+                <div class="response-area" id="oauth-response">
+Click "Generate OAuth URL" to create Strava authorization URL...
+                </div>
+            </div>
+
+            <!-- strava-auth Edge Function Test -->
+            <div class="test-card">
+                <h3>🔑 Test strava-auth</h3>
+                <div class="input-group">
+                    <label for="auth-code">Authorization Code:</label>
+                    <input type="text" id="auth-code" placeholder="fake_test_code_123" value="fake_test_code_123">
+                </div>
+                <button class="test-button" onclick="testStravaAuth()">Call strava-auth</button>
+                <div class="response-area" id="auth-response">
+Ready to test strava-auth edge function...
+                </div>
+            </div>
+
+            <!-- strava-activities Edge Function Test -->
+            <div class="test-card">
+                <h3>🏃 Test strava-activities</h3>
+                <div class="input-group">
+                    <label for="activities-limit">Activities Limit:</label>
+                    <input type="number" id="activities-limit" value="5" min="1" max="30">
+                </div>
+                <button class="test-button" onclick="testStravaActivities()">List Activities</button>
+                <div class="response-area" id="activities-response">
+Ready to test strava-activities edge function...
+                </div>
+            </div>
+
+            <!-- transfer-activity Edge Function Test -->
+            <div class="test-card">
+                <h3>📤 Test transfer-activity</h3>
+                <div class="input-group">
+                    <label for="activity-id">Activity ID:</label>
+                    <input type="number" id="activity-id" value="123456789" placeholder="Enter Strava activity ID">
+                </div>
+                <button class="test-button" onclick="testTransferActivity()">Transfer Activity</button>
+                <div class="response-area" id="transfer-response">
+Ready to test transfer-activity edge function...
+                </div>
+            </div>
+
+            <!-- Environment & Configuration -->
+            <div class="test-card">
+                <h3>⚙️ Environment Config</h3>
+                <button class="test-button" onclick="checkSupabaseConnection()">Test Supabase Connection</button>
+                <button class="test-button" onclick="clearAllResponses()">Clear All Responses</button>
+                <div class="response-area" id="config-response">
+Environment configuration and connection tests...
+                </div>
+            </div>
+
+            <!-- Manual Testing Tools -->
+            <div class="test-card">
+                <h3>🧪 Manual Testing</h3>
+                <button class="test-button" onclick="openSuccessPage()">Open Success Page</button>
+                <button class="test-button" onclick="openDebugPage()">Open React Debug</button>
+                <button class="test-button" onclick="refreshPage()">Refresh Test Suite</button>
+                <div class="response-area" id="manual-response">
+Quick navigation and manual testing tools...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentState = '';
+        let oauthUrl = '';
+        const SUPABASE_URL = 'https://ojjpslrhyutizwpvvngu.supabase.co';
+        
+        // Base64URL encoding/decoding helpers (matching React implementation)
+        const toBase64Url = (obj) => {
+            const json = JSON.stringify(obj);
+            return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        };
+
+        const fromBase64Url = (str) => {
+            try {
+                const pad = str.length % 4 === 0 ? '' : '='.repeat(4 - (str.length % 4));
+                const b64 = str.replace(/-/g, '+').replace(/_/g, '/') + pad;
+                return JSON.parse(atob(b64));
+            } catch {
+                return null;
+            }
+        };
+
+        // Environment detection
+        function detectEnvironment() {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            document.getElementById('env-type').textContent = isLocalhost ? 'Development' : 'Production';
+            
+            // Check if dev server is running
+            if (isLocalhost) {
+                checkDevServer();
+            }
+        }
+
+        async function checkDevServer() {
+            try {
+                const response = await fetch(window.location.origin, { mode: 'no-cors' });
+                document.getElementById('server-status').textContent = 'Dev Server OK';
+                document.getElementById('server-status').className = 'status-badge status-ok';
+            } catch {
+                document.getElementById('server-status').textContent = 'Dev Server Down';
+                document.getElementById('server-status').className = 'status-badge status-error';
+            }
+        }
+
+        // OAuth URL generation
+        function generateOAuthUrl() {
+            const userId = document.getElementById('user-id').value.trim();
+            if (!userId) {
+                updateResponse('oauth-response', '❌ Error: User ID is required for OAuth URL generation');
+                return;
+            }
+
+            const origin = window.location.origin;
+            const returnUrl = origin.includes('localhost') 
+                ? `${origin}/strava/success`
+                : 'https://runaro.dk/strava/success';
+
+            const statePayload = {
+                userId,
+                returnUrl,
+                nonce: Math.random().toString(36).substring(2, 15),
+                ts: Date.now(),
+            };
+
+            currentState = toBase64Url(statePayload);
+            
+            const STRAVA_CLIENT_ID = '174654';
+            const REDIRECT_URI = 'https://runaro.dk/auth/strava/callback';
+
+            const authUrl = new URL('https://www.strava.com/oauth/authorize');
+            authUrl.searchParams.set('client_id', STRAVA_CLIENT_ID);
+            authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
+            authUrl.searchParams.set('response_type', 'code');
+            authUrl.searchParams.set('scope', 'read,activity:read_all');
+            authUrl.searchParams.set('state', currentState);
+            authUrl.searchParams.set('approval_prompt', 'force');
+
+            oauthUrl = authUrl.toString();
+            document.getElementById('start-oauth').disabled = false;
+
+            const response = {
+                generated: new Date().toISOString(),
+                userId,
+                returnUrl,
+                statePayload,
+                state: currentState,
+                oauthUrl
+            };
+
+            updateResponse('oauth-response', 
+                `✅ OAuth URL Generated!\n\n` +
+                `State Payload:\n${JSON.stringify(statePayload, null, 2)}\n\n` +
+                `State (Base64URL): ${currentState}\n\n` +
+                `OAuth URL:\n${oauthUrl}\n\n` +
+                `Ready to start OAuth flow!`
+            );
+        }
+
+        function startOAuthFlow() {
+            if (!oauthUrl) {
+                updateResponse('oauth-response', '❌ Error: Generate OAuth URL first');
+                return;
+            }
+            window.location.href = oauthUrl;
+        }
+
+        // Edge function tests
+        async function testStravaAuth() {
+            const code = document.getElementById('auth-code').value.trim() || 'fake_test_code_123';
+            
+            if (!currentState) {
+                updateResponse('auth-response', '❌ Error: Generate OAuth URL first to create state parameter');
+                return;
+            }
+
+            updateResponse('auth-response', '🔄 Calling strava-auth edge function...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/strava-auth`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code, state: currentState })
+                });
+
+                const data = await response.json();
+                const result = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    body: data,
+                    timestamp: new Date().toISOString()
+                };
+
+                updateResponse('auth-response', 
+                    `✅ Response (${response.status}):\n\n${JSON.stringify(result, null, 2)}`
+                );
+
+            } catch (error) {
+                updateResponse('auth-response', 
+                    `❌ Error calling strava-auth:\n\n${error.message}\n\nTimestamp: ${new Date().toISOString()}`
+                );
+            }
+        }
+
+        async function testStravaActivities() {
+            const limit = parseInt(document.getElementById('activities-limit').value) || 5;
+            
+            updateResponse('activities-response', '🔄 Calling strava-activities edge function...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/strava-activities`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ limit })
+                });
+
+                const data = await response.json();
+                const result = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: data,
+                    timestamp: new Date().toISOString()
+                };
+
+                updateResponse('activities-response', 
+                    `✅ Response (${response.status}):\n\n${JSON.stringify(result, null, 2)}`
+                );
+
+            } catch (error) {
+                updateResponse('activities-response', 
+                    `❌ Error calling strava-activities:\n\n${error.message}\n\nTimestamp: ${new Date().toISOString()}`
+                );
+            }
+        }
+
+        async function testTransferActivity() {
+            const activityId = parseInt(document.getElementById('activity-id').value) || 123456789;
+            
+            updateResponse('transfer-response', '🔄 Calling transfer-activity edge function...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/transfer-activity`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ activityId })
+                });
+
+                const data = await response.json();
+                const result = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: data,
+                    timestamp: new Date().toISOString()
+                };
+
+                updateResponse('transfer-response', 
+                    `✅ Response (${response.status}):\n\n${JSON.stringify(result, null, 2)}`
+                );
+
+            } catch (error) {
+                updateResponse('transfer-response', 
+                    `❌ Error calling transfer-activity:\n\n${error.message}\n\nTimestamp: ${new Date().toISOString()}`
+                );
+            }
+        }
+
+        // Utility functions
+        async function checkSupabaseConnection() {
+            updateResponse('config-response', '🔄 Testing Supabase connection...');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': 'your-anon-key-would-go-here'
+                    }
+                });
+
+                const result = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    timestamp: new Date().toISOString(),
+                    supabaseUrl: SUPABASE_URL
+                };
+
+                updateResponse('config-response', 
+                    `✅ Supabase Connection Test:\n\n${JSON.stringify(result, null, 2)}`
+                );
+
+            } catch (error) {
+                updateResponse('config-response', 
+                    `❌ Supabase Connection Error:\n\n${error.message}\n\nURL: ${SUPABASE_URL}`
+                );
+            }
+        }
+
+        function clearAllResponses() {
+            const responseAreas = ['oauth-response', 'auth-response', 'activities-response', 'transfer-response', 'config-response', 'manual-response'];
+            responseAreas.forEach(id => {
+                document.getElementById(id).textContent = `${id.replace('-response', '')} responses cleared...`;
+            });
+        }
+
+        function openSuccessPage() {
+            const url = window.location.origin.includes('localhost') 
+                ? `${window.location.origin}/strava/success`
+                : 'https://runaro.dk/strava/success';
+            window.open(url, '_blank');
+            updateResponse('manual-response', `🔗 Opening: ${url}`);
+        }
+
+        function openDebugPage() {
+            const url = window.location.origin.includes('localhost') 
+                ? `${window.location.origin}/debug/strava`
+                : 'https://runaro.dk/debug/strava';
+            window.open(url, '_blank');
+            updateResponse('manual-response', `🔗 Opening: ${url}`);
+        }
+
+        function refreshPage() {
+            window.location.reload();
+        }
+
+        function updateResponse(elementId, text) {
+            document.getElementById(elementId).textContent = text;
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            detectEnvironment();
+            console.log('🔧 Strava Integration Test Suite Loaded');
+            console.log('Server URL:', SUPABASE_URL);
+            console.log('Current origin:', window.location.origin);
+        });
+    </script>
+</body>
+</html>

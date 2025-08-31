@@ -1,0 +1,15 @@
+project_id = "ojjpslrhyutizwpvvngu"
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[auth]
+enabled = true
+site_url = "https://runaro.dk"
+additional_redirect_urls = ["https://runaro.dk/auth/strava/callback"]
+
+[functions.strava-auth]
+verify_jwt = false

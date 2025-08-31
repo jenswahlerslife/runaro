@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm install)",
+      "WebFetch(domain:localhost)",
+      "Bash(npm install:*)",
+      "Bash(npx supabase link:*)",
+      "Bash(npx supabase functions deploy:*)",
+      "Bash(curl:*)",
+      "Bash(set SUPABASE_ACCESS_TOKEN=sbp_your_token_here)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(start http://localhost:8080/test-debug.html)",
+      "Bash(supabase:*)",
+      "Bash(npx supabase:*)",
+      "Bash(set SUPABASE_ACCESS_TOKEN=sbp_YOUR_TOKEN_HERE)",
+      "Bash(start http://localhost:8080/test/strava-flow)",
+      "Bash(start http://localhost:8080/test-strava-integration.html)",
+      "Bash(set SUPABASE_ACCESS_TOKEN=sbp_eed1316b98c00000199ef9b93fa5dee163591696)",
+      "Bash(start http://localhost:8080/SMART_REDIRECT_TEST.html)",
+      "Bash(start http://localhost:8080/FLOW_FIXED_TEST.html)",
+      "Bash(start http://localhost:8081/test-strava-integration.html)",
+      "Bash(start http://localhost:8081/FLOW_FIXED_TEST.html)",
+      "Bash(start:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

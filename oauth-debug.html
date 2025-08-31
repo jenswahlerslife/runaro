@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; border-left: 4px solid #f44336; }
+        .success { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        button { padding: 10px 20px; margin: 10px 0; background: #ff4500; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        pre { white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <h1>🔍 OAuth Debug Tool</h1>
+    
+    <button onclick="startOAuth()">Start Strava OAuth</button>
+    <button onclick="parseCallback()">Parse Current URL</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        let logCount = 0;
+        
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const div = document.createElement('div');
+            div.className = `debug ${type}`;
+            div.innerHTML = `<strong>[${++logCount}] ${new Date().toLocaleTimeString()}:</strong><br>${message}`;
+            logs.appendChild(div);
+            console.log(`[OAuth Debug] ${message}`);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            logCount = 0;
+        }
+        
+        function startOAuth() {
+            log('🚀 Starting OAuth flow...', 'info');
+            
+            const clientId = '174654';
+            const redirectUri = 'https://runaro.dk/auth/strava/callback';
+            const scope = 'read,activity:read_all';
+            const state = 'debug-user-' + Date.now(); // Simulate a user ID
+            
+            const url = `https://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&approval_prompt=auto&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`;
+            
+            log(`📋 OAuth Parameters:
+• Client ID: ${clientId}
+• Redirect URI: ${redirectUri}
+• Scope: ${scope}
+• State: ${state}`, 'success');
+            
+            log(`🔗 Full OAuth URL:
+${url}`, 'info');
+            
+            log('🌐 Opening Strava authorization...', 'info');
+            window.open(url, '_blank', 'width=600,height=700');
+        }
+        
+        function parseCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+            
+            log('🔍 Parsing current URL parameters:', 'info');
+            log(`Current URL: ${window.location.href}`, 'info');
+            
+            if (code) {
+                log(`✅ Authorization code found: ${code.substring(0, 20)}...`, 'success');
+            } else {
+                log('❌ No authorization code found', 'error');
+            }
+            
+            if (state) {
+                log(`✅ State parameter found: ${state}`, 'success');
+            } else {
+                log('❌ No state parameter found', 'error');
+            }
+            
+            if (error) {
+                log(`❌ OAuth error: ${error}`, 'error');
+            }
+            
+            if (code && state) {
+                log(`🎯 Ready for token exchange:
+• Code: ${code}
+• State: ${state}`, 'success');
+            }
+        }
+        
+        // Auto-parse URL on page load
+        window.onload = function() {
+            if (window.location.search) {
+                parseCallback();
+            }
+        };
+    </script>
+</body>
+</html>

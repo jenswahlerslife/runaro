@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Smart Redirect Test - LØSNING IMPLEMENTERET!</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            color: #2d3748;
+        }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .success-banner {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .flow-box {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #38a169;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .code-block {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Monaco', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        .highlight {
+            background: #fef5e7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ed8936;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Smart Redirect Løsning</h1>
+        
+        <div class="success-banner">
+            ✅ CHATGPT'S SMARTE LØSNING ER NU IMPLEMENTERET!<br>
+            🔄 Localhost → Strava → Prod → 302 Redirect → Localhost
+        </div>
+
+        <div class="flow-box">
+            <h3>🚀 Sådan virker det nu:</h3>
+            <ol>
+                <li><strong>Frontend (localhost):</strong> Bygger state med returnUrl=localhost</li>
+                <li><strong>Strava OAuth:</strong> Redirect til https://runaro.dk/auth/strava/callback (fast)</li>
+                <li><strong>Edge function:</strong> Modtager på prod, gemmer tokens</li>
+                <li><strong>302 Redirect:</strong> Sender bruger tilbage til localhost via state.returnUrl</li>
+                <li><strong>Success page:</strong> Loader på localhost med tokens fra prod database</li>
+            </ol>
+        </div>
+
+        <div class="highlight">
+            <h3>🔧 Hvad der blev ændret:</h3>
+            <ul>
+                <li><strong>StravaConnect.tsx:</strong> Fast redirect URI + base64url state med returnUrl</li>
+                <li><strong>strava-auth function:</strong> Parser state og 302 redirect til returnUrl (whitelistet)</li>
+                <li><strong>Sikkerhed:</strong> Kun localhost:8080 og runaro.dk tilladt som returnUrl</li>
+            </ul>
+        </div>
+
+        <h3>📋 State Payload (eksempel):</h3>
+        <div class="code-block" id="stateExample"></div>
+
+        <h3>🧪 Test Nu:</h3>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="http://localhost:8080/auth" class="test-button">1. Log ind først</a>
+            <a href="http://localhost:8080/test/strava-flow" class="test-button">2. Test Strava Flow</a>
+            <a href="http://localhost:8080/strava/success" class="test-button">3. Success Page</a>
+        </div>
+
+        <div class="flow-box">
+            <h3>✨ Forventede Resultater:</h3>
+            <p><strong>Fra localhost:</strong> Connect Strava → Strava OAuth → runaro.dk callback → 302 tilbage til localhost:8080/strava/success</p>
+            <p><strong>Fra prod:</strong> Connect Strava → Strava OAuth → runaro.dk callback → forbliver på runaro.dk/strava/success</p>
+        </div>
+
+        <div class="code-block">
+// Nu kan vi udvikle lokalt selvom Strava kun accepterer runaro.dk! 🎉
+// Redirect URI i Strava: https://runaro.dk/auth/strava/callback
+// Men brugere ender tilbage på localhost via smart state redirect
+        </div>
+    </div>
+
+    <script>
+        // Show example state payload
+        const exampleState = {
+            userId: "12345678-1234-1234-1234-123456789abc",
+            returnUrl: window.location.origin.includes('localhost') 
+                ? "http://localhost:8080/strava/success"
+                : "https://runaro.dk/strava/success",
+            nonce: "a1b2c3d4e5",
+            ts: Date.now()
+        };
+
+        function toBase64Url(obj) {
+            const json = JSON.stringify(obj, null, 2);
+            const base64 = btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            return base64;
+        }
+
+        document.getElementById('stateExample').innerHTML = `
+Original object:
+${JSON.stringify(exampleState, null, 2)}
+
+Base64URL encoded:
+${toBase64Url(exampleState)}
+
+OAuth URL ville være:
+https://www.strava.com/oauth/authorize?
+  client_id=174654&
+  redirect_uri=https://runaro.dk/auth/strava/callback&
+  state=${toBase64Url(exampleState)}&
+  ...`;
+
+        // Test server status
+        fetch('http://localhost:8080')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ Development server confirmed running');
+                }
+            })
+            .catch(() => {
+                console.log('⚠️ Development server not reachable');
+            });
+    </script>
+</body>
+</html>
