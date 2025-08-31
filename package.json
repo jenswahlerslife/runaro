@@ -8,7 +8,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync": "node auto-sync.js",
+    "sync:message": "node -e \"const {syncWithMessage} = require('./sync-helper'); syncWithMessage(process.argv[1])\"",
+    "git:status": "git status",
+    "git:push": "git add . && git commit -m 'Auto-update' && git push origin main"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
