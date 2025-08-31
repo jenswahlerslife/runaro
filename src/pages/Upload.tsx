@@ -103,7 +103,7 @@ const Upload = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-3xl font-black text-white mb-3 drop-shadow">
-                      Strava Forbundet!
+                      Strava Forbundet! 🔥 BUILD MARKER v2.0 🔥
                     </h3>
                     <p className="text-green-100 text-xl drop-shadow">
                       Sender dig videre til dine aktiviteter...
