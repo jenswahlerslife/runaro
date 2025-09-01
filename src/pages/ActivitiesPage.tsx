@@ -27,15 +27,22 @@ function formatTimeSec(sec: number | null): string {
   return `${r}s`;
 }
 
-function formatKm(km: number | null): string {
-  const v = km ?? 0;
-  return `${v.toFixed(2)} km`;
+function formatKm(distanceValue: number | null): string {
+  if (!distanceValue || distanceValue <= 0) return "0.00 km";
+  
+  // If value is > 1000, assume it's in meters and convert to km
+  const km = distanceValue > 1000 ? distanceValue / 1000 : distanceValue;
+  return `${km.toFixed(2)} km`;
 }
 
-function formatPaceMinPerKm(movingSec: number | null, km: number | null): string {
-  const dist = km ?? 0;
-  if (!movingSec || movingSec <= 0 || dist <= 0) return "–";
-  const paceSecPerKm = movingSec / dist;
+function formatPaceMinPerKm(movingSec: number | null, distanceValue: number | null): string {
+  if (!movingSec || movingSec <= 0 || !distanceValue || distanceValue <= 0) return "–";
+  
+  // Convert to km if needed
+  const km = distanceValue > 1000 ? distanceValue / 1000 : distanceValue;
+  if (km <= 0) return "–";
+  
+  const paceSecPerKm = movingSec / km;
   const mm = Math.floor(paceSecPerKm / 60);
   const ss = Math.round(paceSecPerKm % 60);
   return `${mm}:${ss.toString().padStart(2, "0")} /km`;
@@ -61,20 +68,48 @@ export default function ActivitiesPage() {
       setLoading(true);
       console.log('[Activities] Fetching activities for user:', user.id);
       
-      const { data, error } = await supabase
+      // First try with included_in_game filter
+      let { data, error } = await supabase
         .from("user_activities")
         .select(
-          "id, name, distance, moving_time, activity_type, start_date, strava_activity_id"
+          "id, name, distance, moving_time, activity_type, start_date, strava_activity_id, included_in_game"
         )
         .eq("user_id", user.id)
-        .eq("included_in_game", true) // Only activities included in game
+        .eq("included_in_game", true)
         .order("start_date", { ascending: false });
 
+      // If no results, try without included_in_game filter (maybe column doesn't exist yet)
+      if (!error && (!data || data.length === 0)) {
+        console.log('[Activities] No activities with included_in_game=true, trying without filter...');
+        const fallback = await supabase
+          .from("user_activities")
+          .select(
+            "id, name, distance, moving_time, activity_type, start_date, strava_activity_id"
+          )
+          .eq("user_id", user.id)
+          .order("start_date", { ascending: false });
+        
+        data = fallback.data;
+        error = fallback.error;
+      }
+
       if (error) {
-        console.error("Activities load error:", error);
+        console.error("[Activities] Database error:", error);
+        console.error("[Activities] Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         setRows([]);
       } else {
-        console.log('[Activities] Loaded activities:', data?.length || 0);
+        console.log('[Activities] Raw database response:', data);
+        console.log('[Activities] Found activities:', data?.length || 0);
+        
+        if (data && data.length > 0) {
+          console.log('[Activities] Sample activity:', data[0]);
+        }
+        
         setRows(
           (data ?? []).map((d: any) => ({
             id: d.id,
@@ -182,6 +217,24 @@ export default function ActivitiesPage() {
           </Card>
         </div>
 
+        {/* Debug Info (remove this in production) */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="text-sm text-yellow-800">Debug Info</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-yellow-700">
+              <p>User ID: {user?.id}</p>
+              <p>Activities found: {rows.length}</p>
+              <p>Loading: {loading.toString()}</p>
+              <p>Check browser console for detailed logs</p>
+              {rows.length > 0 && (
+                <p>Sample activity: {JSON.stringify(rows[0], null, 2)}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Activities Table */}
         {rows.length === 0 ? (
           <Card>
@@ -192,6 +245,9 @@ export default function ActivitiesPage() {
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Upload activities from Strava to see them here
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Run the debug SQL queries in Supabase to check if data exists in the database
               </p>
               <Link to="/upload">
                 <Button>
