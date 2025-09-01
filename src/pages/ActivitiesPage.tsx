@@ -78,9 +78,9 @@ export default function ActivitiesPage() {
         .eq("included_in_game", true)
         .order("start_date", { ascending: false });
 
-      // If no results, try without included_in_game filter (maybe column doesn't exist yet)
-      if (!error && (!data || data.length === 0)) {
-        console.log('[Activities] No activities with included_in_game=true, trying without filter...');
+      // If no results or error with included_in_game, try without filter (column might not exist)
+      if (error || !data || data.length === 0) {
+        console.log('[Activities] Trying without included_in_game filter (fallback)...');
         const fallback = await supabase
           .from("user_activities")
           .select(
@@ -91,6 +91,7 @@ export default function ActivitiesPage() {
         
         data = fallback.data;
         error = fallback.error;
+        console.log('[Activities] Fallback query result:', data?.length || 0, 'activities');
       }
 
       if (error) {
