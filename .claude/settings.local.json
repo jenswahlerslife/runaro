@@ -33,7 +33,8 @@
       "Bash(npm run sync:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(npm i:*)"
+      "Bash(npm i:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Circle, Popup, useMap } from 'react-leaflet';
-import { Icon, LatLngExpression, Map as LeafletMap } from 'leaflet';
+import { MapContainer, TileLayer, Circle, Popup, useMap, Polygon } from 'react-leaflet';
+import { Icon, LatLngExpression, Map as LeafletMap, LatLngBounds } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
 import { Navigation, Sun, Moon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useSearchParams } from 'react-router-dom';
+import { Territory, createTerritoryFromActivity } from '@/utils/territory';
 
 // Fix for default markers in react-leaflet
 delete (Icon.Default.prototype as any)._getIconUrl;
@@ -14,11 +18,13 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Component to handle map instance access
+// Component to handle map instance access and territory bounds
 const MapController: React.FC<{ 
   userLocation: [number, number] | null; 
+  territories: Territory[];
+  focusActivityId: number | null;
   onMapReady: (map: LeafletMap) => void; 
-}> = ({ userLocation, onMapReady }) => {
+}> = ({ userLocation, territories, focusActivityId, onMapReady }) => {
   const map = useMap();
   
   useEffect(() => {
@@ -26,6 +32,43 @@ const MapController: React.FC<{
       onMapReady(map);
     }
   }, [map, onMapReady]);
+
+  useEffect(() => {
+    console.log('[MapController] Effect triggered:', { 
+      hasMap: !!map, 
+      territoriesCount: territories.length, 
+      focusActivityId 
+    });
+    
+    if (map && territories.length > 0) {
+      console.log('[MapController] Processing territories for bounds fitting');
+      
+      // If we have a specific activity to focus on, fit to that
+      if (focusActivityId) {
+        const focusTerritory = territories.find(t => t.stravaActivityId === focusActivityId);
+        if (focusTerritory) {
+          console.log('[MapController] Focusing on specific territory:', focusTerritory.name);
+          const bounds = new LatLngBounds(focusTerritory.polygon);
+          map.fitBounds(bounds, { padding: [20, 20] });
+          return;
+        } else {
+          console.warn('[MapController] Focus activity not found:', focusActivityId);
+        }
+      }
+      
+      // Otherwise fit to all territories
+      const allPoints = territories.flatMap(t => t.polygon);
+      console.log('[MapController] Fitting bounds to all territories, total points:', allPoints.length);
+      
+      if (allPoints.length > 0) {
+        const bounds = new LatLngBounds(allPoints);
+        console.log('[MapController] Bounds calculated:', bounds.toBBoxString());
+        map.fitBounds(bounds, { padding: [20, 20] });
+      }
+    } else if (territories.length === 0) {
+      console.log('[MapController] No territories to fit bounds to');
+    }
+  }, [map, territories, focusActivityId]);
 
   return null;
 };
@@ -62,13 +105,86 @@ const Map: React.FC = () => {
   const [showArea, setShowArea] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  const [territories, setTerritories] = useState<Territory[]>([]);
+  const [loading, setLoading] = useState(true);
   const mapRef = useRef<LeafletMap | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const defaultCenter: LatLngExpression = [55.6761, 12.5683]; // Copenhagen, Denmark
+  
+  const focusActivityId = searchParams.get('aid') ? parseInt(searchParams.get('aid')!) : null;
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    const fetchTerritories = async () => {
+      if (!user || !isClient) return;
+      
+      setLoading(true);
+      try {
+        console.log('[Map] Fetching activities for user:', user.id);
+        
+        const { data: activities, error } = await supabase
+          .from('user_activities')
+          .select('id, name, activity_type, strava_activity_id, polyline, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('[Map] Error fetching territories:', error);
+          toast({
+            title: "Error",
+            description: "Could not load your territories",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('[Map] Fetched activities:', activities?.length || 0, 'activities');
+        console.log('[Map] Raw activities data:', activities);
+
+        const territoryList: Territory[] = [];
+        activities?.forEach((activity, index) => {
+          console.log(`[Map] Processing activity ${index + 1}:`, {
+            id: activity.id,
+            name: activity.name,
+            strava_activity_id: activity.strava_activity_id,
+            has_polyline: !!activity.polyline,
+            polyline_length: activity.polyline?.length || 0
+          });
+          
+          const territory = createTerritoryFromActivity(activity);
+          if (territory) {
+            territoryList.push(territory);
+            console.log(`[Map] Created territory with ${territory.polygon.length} points`);
+          } else {
+            console.warn(`[Map] Failed to create territory from activity:`, activity.name);
+          }
+        });
+
+        setTerritories(territoryList);
+        console.log(`[Map] Final result: ${territoryList.length} territories ready for rendering`);
+        
+        if (territoryList.length === 0) {
+          console.warn('[Map] No territories created! Check if activities have valid polylines.');
+        }
+      } catch (error) {
+        console.error('[Map] Error loading territories:', error);
+        toast({
+          title: "Error", 
+          description: "Failed to load territories",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTerritories();
+  }, [user, isClient, toast]);
 
   const handleMapReady = (map: LeafletMap) => {
     mapRef.current = map;
@@ -132,6 +248,37 @@ const Map: React.FC = () => {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="w-full">
+        <div className="relative w-full min-h-[60vh] h-[70vh] rounded-lg overflow-hidden border border-border flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="text-center p-8">
+            <Navigation className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Log in to see your territories
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Upload your running routes from Strava to see them as territories on the map
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full">
+        <div className="relative w-full min-h-[60vh] h-[70vh] rounded-lg overflow-hidden border border-border flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading your territories...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="relative w-full min-h-[60vh] h-[70vh] rounded-lg overflow-hidden border border-border">
@@ -142,7 +289,12 @@ const Map: React.FC = () => {
           zoomControl={true}
           attributionControl={false}
         >
-          <MapController userLocation={showArea} onMapReady={handleMapReady} />
+          <MapController 
+            userLocation={showArea} 
+            territories={territories}
+            focusActivityId={focusActivityId}
+            onMapReady={handleMapReady} 
+          />
           <TileLayer
             key={mapStyle}
             attribution={mapStyles[mapStyle].attribution}
@@ -168,7 +320,60 @@ const Map: React.FC = () => {
               </Popup>
             </Circle>
           )}
+
+          {/* Render territories as polygons */}
+          {territories.map((territory, index) => {
+            console.log(`[Map] Rendering territory ${index + 1}:`, {
+              id: territory.id,
+              name: territory.name,
+              polygonPoints: territory.polygon.length,
+              firstPoint: territory.polygon[0],
+              lastPoint: territory.polygon[territory.polygon.length - 1],
+              isFocused: focusActivityId === territory.stravaActivityId
+            });
+            
+            return (
+              <Polygon 
+                key={territory.id}
+                positions={territory.polygon}
+                pathOptions={{
+                  color: '#111827',
+                  weight: 2,
+                  fillColor: focusActivityId === territory.stravaActivityId ? '#ef4444' : '#f97316',
+                  fillOpacity: 0.35,
+                  opacity: focusActivityId === territory.stravaActivityId ? 1 : 0.8,
+                }}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <h4 className="font-semibold text-sm">{territory.name}</h4>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {territory.activityType} • {new Date(territory.createdAt).toLocaleDateString('da-DK')}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {territory.polygon.length} points
+                    </p>
+                  </div>
+                </Popup>
+              </Polygon>
+            );
+          })}
         </MapContainer>
+
+        {/* No territories message */}
+        {territories.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center max-w-sm mx-4">
+              <Navigation className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                No territories yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Connect your Strava account and upload your running routes to see them as territories on this map.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="absolute top-16 right-4 z-[1000] flex flex-col gap-2">
           {(Object.keys(mapStyles) as MapStyle[]).map((style) => {

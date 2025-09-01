@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Map Debug Test</title>
+</head>
+<body>
+    <h1>Map Debug Instructions</h1>
+    <p>Follow these steps to debug the map rendering:</p>
+    
+    <h2>1. Check Database</h2>
+    <p>Open your browser to the map page: <a href="http://localhost:8080" target="_blank">http://localhost:8080</a></p>
+    <p>Log in and navigate to the map page</p>
+    
+    <h2>2. Open Dev Tools</h2>
+    <p>Press F12 and go to the Console tab</p>
+    <p>Look for these debug messages:</p>
+    <ul>
+        <li><strong>[Map] Fetching activities for user:</strong> - Shows user ID</li>
+        <li><strong>[Map] Fetched activities:</strong> - Shows how many activities were found</li>
+        <li><strong>[Map] Raw activities data:</strong> - Shows the full database response</li>
+        <li><strong>[Territory] Processing activity:</strong> - Shows each activity being processed</li>
+        <li><strong>[Territory] Polyline length:</strong> - Shows if polyline data exists</li>
+        <li><strong>[Map] Final result:</strong> - Shows how many territories were created</li>
+        <li><strong>[Map] Rendering territory:</strong> - Shows each territory being drawn</li>
+    </ul>
+    
+    <h2>3. Common Issues to Check</h2>
+    <ul>
+        <li><strong>No activities found:</strong> Check if transfer from Strava success page worked</li>
+        <li><strong>Activities found but no polylines:</strong> Check if Strava activities had GPS data</li>
+        <li><strong>Polylines exist but no territories created:</strong> Check if polylines are valid</li>
+        <li><strong>Territories created but not visible:</strong> Check bounds fitting and coordinate order</li>
+    </ul>
+    
+    <h2>4. Test Flow</h2>
+    <ol>
+        <li>Go to <a href="http://localhost:8080/strava/success" target="_blank">Strava Success page</a></li>
+        <li>Click "Overfør til spillet" on an activity</li>
+        <li>Check Network tab for successful 200 response</li>
+        <li>Go to <a href="http://localhost:8080/map" target="_blank">Map page</a></li>
+        <li>Check console logs for debugging info</li>
+    </ol>
+</body>
+</html>

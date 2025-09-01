@@ -101,10 +101,10 @@ const StravaSuccess = () => {
       // Remove transferred activity from list
       setActivities(prev => prev.filter(a => a.id !== activity.id));
 
-      // Redirect to map page to see the territory
+      // Redirect to map page to see the territory with activity ID
       setTimeout(() => {
         console.log('Redirecting to /map to show territory...');
-        navigate('/map');
+        navigate(`/map?aid=${activity.id}`);
       }, 1500);
     } catch (error: any) {
       console.error('Transfer error:', error);
