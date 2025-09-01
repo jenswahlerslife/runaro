@@ -1,5 +1,59 @@
 -- RUN THIS IN SUPABASE SQL EDITOR
 
+-- Add total_points column to profiles
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS total_points INTEGER DEFAULT 0;
+
+-- Create the points increment function
+CREATE OR REPLACE FUNCTION public.increment_user_points(user_uuid UUID, points_to_add INTEGER)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $
+BEGIN
+  UPDATE public.profiles
+  SET total_points = COALESCE(total_points, 0) + points_to_add
+  WHERE user_id = user_uuid;
+END;
+$;
+
+-- Create user_activities table
+CREATE TABLE IF NOT EXISTS public.user_activities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  strava_activity_id bigint NOT NULL,
+  name text NOT NULL,
+  distance real DEFAULT 0,
+  moving_time integer DEFAULT 0,
+  activity_type text NOT NULL DEFAULT 'Run',
+  start_date timestamptz NOT NULL DEFAULT now(),
+  average_speed real DEFAULT 0,
+  max_speed real DEFAULT 0,
+  total_elevation_gain real DEFAULT 0,
+  points_earned integer NOT NULL DEFAULT 0,
+  polyline text,
+  route_coordinates jsonb, -- Add this for territory system
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(user_id, strava_activity_id)
+);
+
+-- Enable RLS on user_activities
+ALTER TABLE public.user_activities ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for user_activities
+DROP POLICY IF EXISTS "Users can view their own activities" ON public.user_activities;
+DROP POLICY IF EXISTS "Users can insert their own activities" ON public.user_activities;
+
+CREATE POLICY "Users can view their own activities"
+ON public.user_activities
+FOR SELECT
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own activities"
+ON public.user_activities
+FOR INSERT
+WITH CHECK (user_id = auth.uid());
+
 -- 1) Simple user totals RPC for dashboard stats
 create or replace function public.user_totals()
 returns table (

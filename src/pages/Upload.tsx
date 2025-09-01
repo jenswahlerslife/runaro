@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import StravaConnect from '@/components/StravaConnect';
 import { Upload as UploadIcon, CheckCircle, FileText, ArrowRight } from 'lucide-react';
+import Layout from '@/components/Layout';
 
 const Upload = () => {
   console.log('🚀 Upload component rendered');
@@ -54,7 +55,8 @@ const Upload = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 left-10 w-32 h-32 bg-yellow-300/20 rounded-full blur-3xl"></div>
@@ -154,7 +156,8 @@ const Upload = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

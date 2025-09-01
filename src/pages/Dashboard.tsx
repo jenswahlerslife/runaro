@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 import { MapPin, Trophy, Users, Activity } from 'lucide-react';
+import Layout from '@/components/Layout';
 
 interface League {
   id: string;
@@ -158,16 +159,17 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Territory Dashboard</h1>
-        <Link to="/upload">
-          <Button>
-            <Activity className="h-4 w-4 mr-2" />
-            Upload Activity
-          </Button>
-        </Link>
-      </div>
+    <Layout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Territory Dashboard</h1>
+          <Link to="/upload">
+            <Button>
+              <Activity className="h-4 w-4 mr-2" />
+              Upload Activity
+            </Button>
+          </Link>
+        </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -317,7 +319,8 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

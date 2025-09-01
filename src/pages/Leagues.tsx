@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Users, Copy, Check, MapPin, Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import Layout from '@/components/Layout';
 
 interface League {
   id: string;
@@ -235,8 +236,9 @@ const Leagues = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
+    <Layout>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+        <div className="container mx-auto px-6 py-8 max-w-6xl">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-6">
@@ -463,7 +465,8 @@ const Leagues = () => {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 };
 
