@@ -33,9 +33,14 @@ CREATE TABLE IF NOT EXISTS public.user_activities (
   points_earned integer NOT NULL DEFAULT 0,
   polyline text,
   route_coordinates jsonb, -- Add this for territory system
+  included_in_game boolean NOT NULL DEFAULT true, -- Flag for activities included in game
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(user_id, strava_activity_id)
 );
+
+-- Add included_in_game column to existing table if it doesn't exist
+ALTER TABLE public.user_activities
+  ADD COLUMN IF NOT EXISTS included_in_game boolean NOT NULL DEFAULT true;
 
 -- Enable RLS on user_activities
 ALTER TABLE public.user_activities ENABLE ROW LEVEL SECURITY;

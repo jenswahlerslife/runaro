@@ -14,6 +14,7 @@ import StravaCallback from "./pages/StravaCallback";
 import StravaSuccess from "./pages/StravaSuccess";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import ActivitiesPage from "./pages/ActivitiesPage";
 import StravaDebug from "./pages/StravaDebug";
 import StravaLocalTest from "./pages/StravaLocalTest";
 import StravaTestFlow from "./pages/StravaTestFlow";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/activities" element={<ActivitiesPage />} />
             <Route path="/leagues" element={<Leagues />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/auth/strava/callback" element={<StravaCallback />} />
