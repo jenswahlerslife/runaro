@@ -1,0 +1,5 @@
+<svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="8" width="24" height="24" rx="4" fill="currentColor" opacity="0.8"/>
+  <path d="M6 16 L14 12 L22 16 L22 28 L14 32 L6 28 Z" fill="currentColor"/>
+  <text x="32" y="26" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="currentColor">Runaro</text>
+</svg>

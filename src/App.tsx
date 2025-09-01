@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BuildBadge } from "@/components/BuildBadge";
+import Header from "@/components/Header";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MapPage from "./pages/MapPage";
@@ -28,21 +29,24 @@ const App = () => (
         <Sonner />
         <BuildBadge />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/map" element={<MapPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/leagues" element={<Leagues />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/auth/strava/callback" element={<StravaCallback />} />
-            <Route path="/strava/success" element={<StravaSuccess />} />
-            <Route path="/debug/strava" element={<StravaDebug />} />
-            <Route path="/test/strava-local" element={<StravaLocalTest />} />
-            <Route path="/test/strava-flow" element={<StravaTestFlow />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Header />
+          <main className="min-h-screen">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/leagues" element={<Leagues />} />
+              <Route path="/upload" element={<Upload />} />
+              <Route path="/auth/strava/callback" element={<StravaCallback />} />
+              <Route path="/strava/success" element={<StravaSuccess />} />
+              <Route path="/debug/strava" element={<StravaDebug />} />
+              <Route path="/test/strava-local" element={<StravaLocalTest />} />
+              <Route path="/test/strava-flow" element={<StravaTestFlow />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

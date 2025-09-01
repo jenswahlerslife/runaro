@@ -25,16 +25,32 @@ interface UserStats {
   total_activities: number;
 }
 
+interface Totals {
+  total_distance_km: number;
+  activities_count: number;
+}
+
+interface TerritoryTotals {
+  total_area_km2: number;
+  territories_count: number;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [stats, setStats] = useState<TerritoryStats[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({ total_distance_km: 0, total_activities: 0 });
+  const [totals, setTotals] = useState<Totals | null>(null);
+  const [terrTotals, setTerrTotals] = useState<TerritoryTotals | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingTotals, setLoadingTotals] = useState(true);
+  const [loadingTerr, setLoadingTerr] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadUserData();
+      loadTotals();
+      loadTerritoryTotals();
     }
   }, [user]);
 
@@ -94,6 +110,42 @@ const Dashboard = () => {
     }
   };
 
+  const loadTotals = async () => {
+    try {
+      const { data, error } = await supabase.rpc("user_totals");
+      if (error) throw error;
+
+      // data can be null if no rows - protect against that
+      const result = Array.isArray(data) ? data[0] : data;
+      setTotals({
+        total_distance_km: Number(result?.total_distance_km ?? 0),
+        activities_count: Number(result?.activities_count ?? 0),
+      });
+    } catch (err) {
+      console.error("Failed to load totals:", err);
+      setTotals({ total_distance_km: 0, activities_count: 0 });
+    } finally {
+      setLoadingTotals(false);
+    }
+  };
+
+  const loadTerritoryTotals = async () => {
+    try {
+      const { data, error } = await supabase.rpc("user_territory_totals");
+      if (error) throw error;
+      const result = Array.isArray(data) ? data[0] : data;
+      setTerrTotals({
+        total_area_km2: Number(result?.total_area_km2 ?? 0),
+        territories_count: Number(result?.territories_count ?? 0),
+      });
+    } catch (e) {
+      console.error("Failed to load territory totals:", e);
+      setTerrTotals({ total_area_km2: 0, territories_count: 0 });
+    } finally {
+      setLoadingTerr(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -126,10 +178,10 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.reduce((sum, stat) => sum + stat.total_area, 0).toFixed(2)} km²
+              {loadingTerr ? "…" : `${(terrTotals?.total_area_km2 ?? 0).toFixed(2)} km²`}
             </div>
             <p className="text-xs text-muted-foreground">
-              Across {leagues.length} leagues
+              Across {loadingTerr ? "…" : terrTotals?.territories_count ?? 0} territories
             </p>
           </CardContent>
         </Card>
@@ -141,7 +193,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userStats.total_distance_km.toFixed(1)} km
+              {loadingTotals ? "…" : `${(totals?.total_distance_km ?? 0).toFixed(1)} km`}
             </div>
             <p className="text-xs text-muted-foreground">
               Total distance covered
@@ -156,7 +208,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userStats.total_activities}
+              {loadingTotals ? "…" : `${totals?.activities_count ?? 0}`}
             </div>
             <p className="text-xs text-muted-foreground">
               Activities uploaded
