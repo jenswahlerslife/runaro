@@ -5,7 +5,10 @@ import { Link } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, ArrowLeft, Map, Calendar, Clock, Gauge } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { Activity, ArrowLeft, Map, Calendar, Clock, Gauge, Target, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { setActivityAsBase, recalculateTerritory, getUserActivitiesWithTerritory } from "@/lib/territory";
 
 type ActivityRow = {
   id: string;
@@ -15,6 +18,9 @@ type ActivityRow = {
   activity_type: string | null;
   start_date: string; // timestamptz
   strava_activity_id: number;
+  is_base: boolean;
+  included_in_game: boolean;
+  route: any; // PostGIS geometry
 };
 
 function formatTimeSec(sec: number | null): string {
@@ -60,6 +66,9 @@ export default function ActivitiesPage() {
   const { user } = useAuth();
   const [rows, setRows] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [settingBase, setSettingBase] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!user) return;
@@ -68,51 +77,16 @@ export default function ActivitiesPage() {
       setLoading(true);
       console.log('[Activities] Fetching activities for user:', user.id);
       
-      // First try with included_in_game filter
-      let { data, error } = await supabase
-        .from("user_activities")
-        .select(
-          "id, name, distance, moving_time, activity_type, start_date, strava_activity_id, included_in_game"
-        )
-        .eq("user_id", user.id)
-        .eq("included_in_game", true)
-        .order("start_date", { ascending: false });
-
-      // If no results or error with included_in_game, try without filter (column might not exist)
-      if (error || !data || data.length === 0) {
-        console.log('[Activities] Trying without included_in_game filter (fallback)...');
-        const fallback = await supabase
-          .from("user_activities")
-          .select(
-            "id, name, distance, moving_time, activity_type, start_date, strava_activity_id"
-          )
-          .eq("user_id", user.id)
-          .order("start_date", { ascending: false });
+      try {
+        const activities = await getUserActivitiesWithTerritory();
+        console.log('[Activities] Found activities:', activities.length);
         
-        data = fallback.data;
-        error = fallback.error;
-        console.log('[Activities] Fallback query result:', data?.length || 0, 'activities');
-      }
-
-      if (error) {
-        console.error("[Activities] Database error:", error);
-        console.error("[Activities] Error details:", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        setRows([]);
-      } else {
-        console.log('[Activities] Raw database response:', data);
-        console.log('[Activities] Found activities:', data?.length || 0);
-        
-        if (data && data.length > 0) {
-          console.log('[Activities] Sample activity:', data[0]);
+        if (activities.length > 0) {
+          console.log('[Activities] Sample activity:', activities[0]);
         }
         
         setRows(
-          (data ?? []).map((d: any) => ({
+          activities.map((d: any) => ({
             id: d.id,
             name: d.name ?? "Untitled activity",
             distance: typeof d.distance === "number" ? d.distance : (d.distance ?? 0),
@@ -120,8 +94,19 @@ export default function ActivitiesPage() {
             activity_type: d.activity_type ?? "Run",
             start_date: d.start_date,
             strava_activity_id: d.strava_activity_id,
+            is_base: d.is_base ?? false,
+            included_in_game: d.included_in_game ?? true,
+            route: d.route,
           }))
         );
+      } catch (error) {
+        console.error("[Activities] Database error:", error);
+        setRows([]);
+        toast({
+          title: "Error loading activities",
+          description: String(error),
+          variant: "destructive",
+        });
       }
       setLoading(false);
     };
@@ -130,14 +115,80 @@ export default function ActivitiesPage() {
   }, [user]);
 
   const totalDistance = useMemo(
-    () => rows.reduce((acc, r) => acc + (r.distance ?? 0), 0),
+    () => rows.filter(r => r.included_in_game).reduce((acc, r) => acc + (r.distance ?? 0), 0),
     [rows]
   );
 
   const totalTime = useMemo(
-    () => rows.reduce((acc, r) => acc + (r.moving_time ?? 0), 0),
+    () => rows.filter(r => r.included_in_game).reduce((acc, r) => acc + (r.moving_time ?? 0), 0),
     [rows]
   );
+
+  const baseActivity = useMemo(
+    () => rows.find(r => r.is_base),
+    [rows]
+  );
+
+  const territoryCount = useMemo(
+    () => rows.filter(r => r.included_in_game).length,
+    [rows]
+  );
+
+  const handleSetBase = async (activityId: string) => {
+    setSettingBase(activityId);
+    try {
+      const result = await setActivityAsBase(activityId, 50);
+      if (result.success) {
+        toast({
+          title: "Base set successfully",
+          description: `Territory includes ${result.territory_count} of ${result.total_count} activities`,
+        });
+        await fetchData(); // Refresh the data
+      } else {
+        toast({
+          title: "Error setting base",
+          description: result.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error setting base",
+        description: String(error),
+        variant: "destructive",
+      });
+    } finally {
+      setSettingBase(null);
+    }
+  };
+
+  const handleRecalculateTerritory = async () => {
+    setRecalculating(true);
+    try {
+      const result = await recalculateTerritory(50);
+      if (result.success) {
+        toast({
+          title: "Territory recalculated",
+          description: `Territory includes ${result.territory_count} of ${result.total_count} activities`,
+        });
+        await fetchData(); // Refresh the data
+      } else {
+        toast({
+          title: "Error recalculating territory",
+          description: result.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error recalculating territory",
+        description: String(error),
+        variant: "destructive",
+      });
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -170,9 +221,29 @@ export default function ActivitiesPage() {
                 My Activities
               </h1>
               <p className="text-muted-foreground">
-                Activities included in the game
+                Manage your territory base and game activities
               </p>
+              {baseActivity && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Base: <span className="font-medium">{baseActivity.name}</span>
+                </p>
+              )}
             </div>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleRecalculateTerritory}
+              disabled={recalculating || !baseActivity}
+              variant="outline"
+              size="sm"
+            >
+              {recalculating ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Recalculate Territory
+            </Button>
           </div>
         </div>
 
@@ -184,9 +255,9 @@ export default function ActivitiesPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{rows.length}</div>
+              <div className="text-2xl font-bold">{territoryCount} / {rows.length}</div>
               <p className="text-xs text-muted-foreground">
-                Included in game
+                In territory / Total
               </p>
             </CardContent>
           </Card>
@@ -299,14 +370,25 @@ export default function ActivitiesPage() {
                           Time
                         </div>
                       </th>
+                      <th className="text-left py-3 px-2 font-medium">Status</th>
                       <th className="text-left py-3 px-2 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row) => (
-                      <tr key={row.id} className="border-b hover:bg-muted/50 transition-colors">
+                      <tr key={row.id} className={`border-b hover:bg-muted/50 transition-colors ${
+                        !row.included_in_game ? 'opacity-60' : ''
+                      }`}>
                         <td className="py-3 px-2">
-                          <div className="font-medium">{row.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{row.name}</span>
+                            {row.is_base && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Target className="h-3 w-3 mr-1" />
+                                Base
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-2 text-muted-foreground">
                           {row.activity_type}
@@ -324,12 +406,42 @@ export default function ActivitiesPage() {
                           {formatTimeSec(row.moving_time)}
                         </td>
                         <td className="py-3 px-2">
-                          <Link to={`/map?aid=${row.strava_activity_id}`}>
-                            <Button variant="outline" size="sm">
-                              <Map className="h-4 w-4 mr-1" />
-                              View on Map
-                            </Button>
-                          </Link>
+                          <div className="flex items-center gap-1">
+                            {row.included_in_game ? (
+                              <Badge variant="default" className="text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                In Territory
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Outside Territory
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex gap-1">
+                            {!row.is_base && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleSetBase(row.id)}
+                                disabled={settingBase === row.id}
+                              >
+                                {settingBase === row.id ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Target className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                            <Link to={`/map?aid=${row.strava_activity_id}`}>
+                              <Button variant="outline" size="sm">
+                                <Map className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}

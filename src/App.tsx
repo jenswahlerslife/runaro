@@ -8,7 +8,8 @@ import { BuildBadge } from "@/components/BuildBadge";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MapPage from "./pages/MapPage";
-import Leagues from "./pages/Leagues";
+import LeaguesPage from "./pages/LeaguesPage";
+import GamePage from "./pages/GamePage";
 import Upload from "./pages/Upload";
 import StravaCallback from "./pages/StravaCallback";
 import StravaSuccess from "./pages/StravaSuccess";
@@ -35,7 +36,8 @@ const App = () => (
             <Route path="/map" element={<MapPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/activities" element={<ActivitiesPage />} />
-            <Route path="/leagues" element={<Leagues />} />
+            <Route path="/leagues" element={<LeaguesPage />} />
+            <Route path="/games/:gameId" element={<GamePage />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/auth/strava/callback" element={<StravaCallback />} />
             <Route path="/strava/success" element={<StravaSuccess />} />

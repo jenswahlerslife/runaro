@@ -3,7 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Map, Upload, Trophy, Activity } from 'lucide-react';
+import { Map, Upload, Trophy, Activity, Play, Gamepad2 } from 'lucide-react';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -28,17 +28,25 @@ const Index = () => {
       <div className="space-y-8">
         {/* Hero Section with Background */}
         <div 
-          className="relative h-96 rounded-lg overflow-hidden bg-cover bg-center flex items-center justify-center"
-          style={{ backgroundImage: 'url(/lovable-uploads/2217aa6a-b403-44ff-9572-c932cef9bedb.png)' }}
+          className="relative h-96 rounded-lg overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center"
         >
-          <div className="absolute inset-0 bg-black/40"></div>
-          <div className="relative z-10 text-center space-y-4 text-white">
-            <h1 className="text-4xl font-bold tracking-tight">
-              Welcome to Your Dashboard
-            </h1>
+          <div className="absolute inset-0 bg-black/20"></div>
+          <div className="relative z-10 text-center space-y-6 text-white">
+            <div className="flex items-center justify-center mb-4">
+              <Gamepad2 className="h-16 w-16 text-white mr-4" />
+              <h1 className="text-5xl font-bold tracking-tight">
+                Territory Game
+              </h1>
+            </div>
             <p className="text-xl max-w-2xl mx-auto">
-              Explore maps, upload content, join leagues, and track your activities all in one place.
+              Compete with friends in territorial battles using your running routes. Expand your territory and conquer the map!
             </p>
+            <Button size="lg" asChild className="text-lg px-8 py-3">
+              <Link to="/leagues">
+                <Play className="h-6 w-6 mr-2" />
+                Start Game
+              </Link>
+            </Button>
           </div>
         </div>
 
