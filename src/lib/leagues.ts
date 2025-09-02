@@ -143,21 +143,35 @@ export async function getUserLeagues(): Promise<League[]> {
 
     if (!profile) throw new Error('Profile not found');
 
-    // Get leagues where user is admin or member
-    const { data: leagues, error } = await supabase
+    // Get leagues where user is admin
+    const { data: adminLeagues, error: adminError } = await supabase
+      .from('leagues')
+      .select('*')
+      .eq('admin_user_id', profile.id);
+
+    if (adminError) throw adminError;
+
+    // Get leagues where user is an approved member
+    const { data: memberLeagues, error: memberError } = await supabase
       .from('leagues')
       .select(`
         *,
         league_members!inner(status)
       `)
-      .or(`admin_user_id.eq.${profile.id},league_members.user_id.eq.${profile.id}`)
+      .eq('league_members.user_id', profile.id)
       .eq('league_members.status', 'approved');
 
-    if (error) throw error;
+    if (memberError) throw memberError;
+
+    // Combine and deduplicate leagues
+    const allLeagues = [...(adminLeagues || []), ...(memberLeagues || [])];
+    const uniqueLeagues = allLeagues.filter((league, index, self) => 
+      index === self.findIndex(l => l.id === league.id)
+    );
 
     // Enhance with additional info
     const enhancedLeagues: League[] = [];
-    for (const league of leagues || []) {
+    for (const league of uniqueLeagues) {
       // Count members
       const { count: memberCount } = await supabase
         .from('league_members')
