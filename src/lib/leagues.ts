@@ -151,20 +151,30 @@ export async function getUserLeagues(): Promise<League[]> {
 
     if (adminError) throw adminError;
 
-    // Get leagues where user is an approved member
-    const { data: memberLeagues, error: memberError } = await supabase
-      .from('leagues')
-      .select(`
-        *,
-        league_members!inner(status)
-      `)
-      .eq('league_members.user_id', profile.id)
-      .eq('league_members.status', 'approved');
+    // Get league IDs where user is an approved member
+    const { data: membershipData, error: membershipError } = await supabase
+      .from('league_members')
+      .select('league_id')
+      .eq('user_id', profile.id)
+      .eq('status', 'approved');
 
-    if (memberError) throw memberError;
+    if (membershipError) throw membershipError;
+
+    // Get league details for member leagues
+    let memberLeagues = [];
+    if (membershipData && membershipData.length > 0) {
+      const leagueIds = membershipData.map(m => m.league_id);
+      const { data, error } = await supabase
+        .from('leagues')
+        .select('*')
+        .in('id', leagueIds);
+      
+      if (error) throw error;
+      memberLeagues = data || [];
+    }
 
     // Combine and deduplicate leagues
-    const allLeagues = [...(adminLeagues || []), ...(memberLeagues || [])];
+    const allLeagues = [...(adminLeagues || []), ...memberLeagues];
     const uniqueLeagues = allLeagues.filter((league, index, self) => 
       index === self.findIndex(l => l.id === league.id)
     );
