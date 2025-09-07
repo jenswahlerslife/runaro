@@ -19,6 +19,7 @@ import ActivitiesPage from "./pages/ActivitiesPage";
 import StravaDebug from "./pages/StravaDebug";
 import StravaLocalTest from "./pages/StravaLocalTest";
 import StravaTestFlow from "./pages/StravaTestFlow";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/activities" element={<ActivitiesPage />} />

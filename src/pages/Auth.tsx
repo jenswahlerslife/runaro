@@ -13,6 +13,8 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [age, setAge] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
@@ -43,18 +45,35 @@ const Auth = () => {
     setLoading(true);
     setError('');
 
+    // Validation
     if (!username) {
       setError('Username is required');
       setLoading(false);
       return;
     }
 
-    const { error } = await signUp(email, password, username);
+    if (!displayName || displayName.length < 2 || displayName.length > 50) {
+      setError('Navn skal være mellem 2 og 50 tegn');
+      setLoading(false);
+      return;
+    }
+
+    const ageNum = parseInt(age);
+    if (!age || isNaN(ageNum) || ageNum < 5 || ageNum > 120) {
+      setError('Alder skal være mellem 5 og 120');
+      setLoading(false);
+      return;
+    }
+
+    const result = await signUp(email, password, username, displayName, ageNum);
     
-    if (error) {
-      setError(error.message);
+    if (result.error) {
+      setError(result.error.message);
+    } else if (result.needsConfirmation) {
+      setError('✅ Tilmelding gennemført! Tjek din email og bekræft din konto ved at klikke på linket.');
     } else {
-      setError('Check your email for the confirmation link!');
+      // User was auto-confirmed
+      setError('✅ Tilmelding gennemført og bekræftet!');
     }
     
     setLoading(false);
@@ -62,11 +81,13 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl">Territory Conquest</CardTitle>
-          <CardDescription className="text-center">
-            Turn your runs into territories and compete with friends
+      <Card className="w-full max-w-lg">
+        <CardHeader className="pb-6">
+          <div className="flex justify-center mb-6">
+            <img src="/lovable-uploads/e5d5e0c5-6573-4ca7-823e-08d5d7708873.png" alt="Runaro" className="h-16 w-auto" />
+          </div>
+          <CardDescription className="text-center text-lg font-medium text-muted-foreground">
+            Erobre verden, ét skridt ad gangen
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -76,10 +97,10 @@ const Auth = () => {
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
+            <TabsContent value="signin" className="mt-6">
+              <form onSubmit={handleSignIn} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -87,10 +108,11 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                   <Input
                     id="password"
                     type="password"
@@ -98,18 +120,50 @@ const Auth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="h-11"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
             
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+            <TabsContent value="signup" className="mt-6">
+              <form onSubmit={handleSignUp} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName" className="text-sm font-medium">Navn *</Label>
+                    <Input
+                      id="displayName"
+                      type="text"
+                      placeholder="Dit fulde navn"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      required
+                      minLength={2}
+                      maxLength={50}
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="age" className="text-sm font-medium">Alder *</Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      placeholder="Din alder"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      required
+                      min={5}
+                      max={120}
+                      className="h-11"
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username" className="text-sm font-medium">Username</Label>
                   <Input
                     id="username"
                     type="text"
@@ -117,10 +171,12 @@ const Auth = () => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
+                    className="h-11"
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-sm font-medium">Email</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -128,10 +184,12 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="h-11"
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-sm font-medium">Password</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -139,9 +197,11 @@ const Auth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="h-11"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                
+                <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
                   {loading ? 'Creating account...' : 'Sign Up'}
                 </Button>
               </form>

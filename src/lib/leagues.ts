@@ -1,5 +1,49 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Helper function to ensure user has a profile
+ */
+async function ensureUserProfile() {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!user) throw new Error('Not authenticated');
+
+  // Try to get or create the profile
+  let profile = null;
+  const { data: existingProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  // Handle 406 or other profile errors gracefully
+  if (profileError && profileError.code !== 'PGRST116') {
+    console.warn('Profile lookup error (will create new):', profileError);
+    // Continue to create profile below
+  }
+
+  if (!existingProfile || profileError) {
+    // Create profile if it doesn't exist
+    const { data: newProfile, error: createError } = await supabase
+      .from('profiles')
+      .insert([{
+        user_id: user.id,
+        username: user.email?.split('@')[0] || 'user',
+        display_name: user.email?.split('@')[0] || 'User',
+      }])
+      .select('id')
+      .single();
+
+    if (createError) throw createError;
+    profile = newProfile;
+  } else {
+    profile = existingProfile;
+  }
+
+  if (!profile) throw new Error('Could not get or create profile');
+  return profile;
+}
+
 export interface League {
   id: string;
   name: string;
@@ -66,6 +110,9 @@ export async function createLeague(
   maxMembers: number = 10
 ): Promise<{ success: boolean; league_id?: string; invite_code?: string; error?: string }> {
   try {
+    // Ensure user has a profile first
+    await ensureUserProfile();
+
     const { data, error } = await supabase.rpc('create_league', {
       p_name: name,
       p_description: description,
@@ -92,6 +139,9 @@ export async function joinLeague(inviteCode: string): Promise<{
   error?: string;
 }> {
   try {
+    // Ensure user has a profile first
+    await ensureUserProfile();
+
     const { data, error } = await supabase.rpc('join_league', {
       p_invite_code: inviteCode
     });
@@ -132,16 +182,7 @@ export async function manageLeagueMembership(
  */
 export async function getUserLeagues(): Promise<League[]> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) throw new Error('Profile not found');
+    const profile = await ensureUserProfile();
 
     // Get leagues where user is admin
     const { data: adminLeagues, error: adminError } = await supabase

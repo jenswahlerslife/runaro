@@ -4,9 +4,37 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Map, Upload, Trophy, Activity, Play, Gamepad2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [userProfile, setUserProfile] = useState<{ display_name: string | null } | null>(null);
+
+  // Fetch user profile data when user is available
+  useEffect(() => {
+    if (user) {
+      const fetchUserProfile = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .single();
+
+          if (error) {
+            console.warn('Error fetching user profile:', error);
+          } else {
+            setUserProfile(data);
+          }
+        } catch (err) {
+          console.warn('Failed to fetch user profile:', err);
+        }
+      };
+
+      fetchUserProfile();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -23,9 +51,19 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
+  // Get display name with fallback
+  const displayName = userProfile?.display_name || user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'gæst';
+
   return (
     <Layout>
       <div className="space-y-8">
+        {/* Welcome Message */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            Velkommen {displayName}!
+          </h1>
+        </div>
+
         {/* Hero Section with Background */}
         <div 
           className="relative h-96 rounded-lg overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center"
@@ -119,31 +157,6 @@ const Index = () => {
               </Button>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-muted/30 rounded-lg p-6">
-          <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
-          <div className="flex flex-wrap gap-4">
-            <Button asChild>
-              <Link to="/map">
-                <Map className="h-4 w-4 mr-2" />
-                Explore Map
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/upload">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Content
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/leagues">
-                <Trophy className="h-4 w-4 mr-2" />
-                Join League
-              </Link>
-            </Button>
-          </div>
         </div>
       </div>
     </Layout>
