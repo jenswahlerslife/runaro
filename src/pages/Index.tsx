@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [userProfile, setUserProfile] = useState<{ display_name: string | null } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ username: string | null; display_name: string | null } | null>(null);
 
   // Fetch user profile data when user is available
   useEffect(() => {
@@ -18,7 +18,7 @@ const Index = () => {
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('display_name')
+            .select('username, display_name')
             .eq('user_id', user.id)
             .single();
 
@@ -51,8 +51,8 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Get display name with fallback
-  const displayName = userProfile?.display_name || user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'gæst';
+  // Get username with fallback
+  const displayName = userProfile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'gæst';
 
   return (
     <Layout>
