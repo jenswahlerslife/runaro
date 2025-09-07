@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 
 const Auth = () => {
@@ -17,6 +18,7 @@ const Auth = () => {
   const [age, setAge] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -34,7 +36,12 @@ const Auth = () => {
     const { error } = await signIn(email, password);
     
     if (error) {
-      setError(error.message);
+      // Handle email not confirmed error specifically
+      if (error.message?.toLowerCase().includes('email not confirmed')) {
+        setError('Din email er ikke bekræftet endnu. Tjek din indbakke og klik på bekræftelseslinket.');
+      } else {
+        setError(error.message);
+      }
     }
     
     setLoading(false);
@@ -70,12 +77,42 @@ const Auth = () => {
     if (result.error) {
       setError(result.error.message);
     } else if (result.needsConfirmation) {
-      setError('✅ Tilmelding gennemført! Tjek din email og bekræft din konto ved at klikke på linket.');
+      setError('✅ Vi har sendt dig et bekræftelseslink. Tjek din email og klik på linket for at aktivere din konto.');
+      setShowResend(true);
     } else {
       // User was auto-confirmed
       setError('✅ Tilmelding gennemført og bekræftet!');
+      setShowResend(false);
     }
     
+    setLoading(false);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      setError('Indtast din email-adresse først');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const siteUrl = import.meta.env.VITE_SITE_URL || 
+        (typeof window !== 'undefined' ? window.location.origin : 'https://runaro.dk');
+        
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: `${siteUrl}/auth` },
+      });
+
+      if (error) {
+        setError(`Fejl ved gensendelse: ${error.message}`);
+      } else {
+        setError('✅ Nyt bekræftelseslink er sendt til din email.');
+      }
+    } catch (err) {
+      setError('Der opstod en fejl ved gensendelse af bekræftelseslink.');
+    }
     setLoading(false);
   };
 
@@ -212,6 +249,19 @@ const Auth = () => {
             <Alert className="mt-4">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
+          )}
+
+          {showResend && (
+            <div className="mt-4 text-center">
+              <Button 
+                variant="outline" 
+                onClick={handleResendConfirmation} 
+                disabled={loading}
+                className="text-sm"
+              >
+                Send bekræftelseslink igen
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

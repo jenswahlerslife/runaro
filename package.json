@@ -23,7 +23,17 @@
     "cf:status": "npx wrangler pages deployment list --project-name runaro",
     "cf:logs": "npx wrangler pages deployment tail --project-name runaro",
     "deploy": "node deploy.js",
-    "deploy:quick": "npm run build && npm run cf:deploy"
+    "deploy:quick": "npm run build && npm run cf:deploy",
+
+    "db:env": "powershell -Command \"Get-Content .env.local | Where-Object {$_ -notmatch '^#'} | ForEach-Object {$k,$v = $_.Split('=',2); [System.Environment]::SetEnvironmentVariable($k,$v,'Process')}\"",
+    "db:status": "npm run db:env && npx supabase migration list",
+    "db:push": "npm run db:env && npx supabase db push",
+    "db:pull": "npm run db:env && npx supabase db pull", 
+    "db:new": "npx supabase migration new",
+    "db:login": "npm run db:env && npx supabase login --token %SUPABASE_ACCESS_TOKEN%",
+    "db:link": "npm run db:env && npx supabase link --project-ref %SUPABASE_PROJECT_REF%",
+    "db:setup": "npm run db:login && npm run db:link",
+    "db:deploy": "npm run db:env && npm run db:push"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

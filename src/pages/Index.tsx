@@ -6,26 +6,56 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Map, Upload, Trophy, Activity, Play, Gamepad2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { UIProfileSelect } from '@/types/ui';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [userProfile, setUserProfile] = useState<{ username: string | null; display_name: string | null } | null>(null);
+  const [userProfile, setUserProfile] = useState<UIProfileSelect | null>(null);
 
   // Fetch user profile data when user is available
   useEffect(() => {
     if (user) {
       const fetchUserProfile = async () => {
         try {
-          const { data, error } = await supabase
+          // Use maybeSingle to handle case where profile doesn't exist yet
+          const { data: prof, error } = await supabase
             .from('profiles')
             .select('username, display_name')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
           if (error) {
             console.warn('Error fetching user profile:', error);
-          } else {
-            setUserProfile(data);
+          }
+
+          // Set the profile data (might be null)
+          setUserProfile(prof);
+
+          // Self-heal: if profile doesn't exist, create one based on user metadata
+          if (!prof && user) {
+            console.log('Profile missing for user, creating self-heal profile...');
+            try {
+              await supabase.from('profiles').upsert({
+                user_id: user.id,
+                username: user.user_metadata?.username ?? null,
+                display_name: user.user_metadata?.display_name ?? null,
+                // age is handled by the database trigger from metadata
+              }, { onConflict: 'user_id' });
+              
+              // Refetch after creation
+              const { data: newProf } = await supabase
+                .from('profiles')
+                .select('username, display_name')
+                .eq('user_id', user.id)
+                .maybeSingle();
+              
+              if (newProf) {
+                setUserProfile(newProf);
+                console.log('Self-heal profile created successfully');
+              }
+            } catch (healError) {
+              console.warn('Self-heal profile creation failed (non-blocking):', healError);
+            }
           }
         } catch (err) {
           console.warn('Failed to fetch user profile:', err);
@@ -51,8 +81,14 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Get username with fallback
-  const displayName = userProfile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'gæst';
+  // Get username with proper fallback as specified:
+  // profiles.username → auth.user_metadata.username → profiles.display_name → auth.user_metadata.display_name → email-prefix → "gæst"
+  const displayName = userProfile?.username 
+    || user?.user_metadata?.username 
+    || userProfile?.display_name 
+    || user?.user_metadata?.display_name 
+    || user?.email?.split('@')[0] 
+    || 'gæst';
 
   return (
     <Layout>

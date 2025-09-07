@@ -1,0 +1,32 @@
+[auth]
+enabled = true
+
+[auth.email]
+enabled = true
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[edge-functions]
+enabled = true
+
+[api]
+enabled = true
+port = 54321
+
+[dashboard]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+image_transformation = true
+
+[functions]
+enabled = true
+
+# Project specific settings
+project_id = "ojjpslrhyutizwpvvngu"
+linked_project = "ojjpslrhyutizwpvvngu"

@@ -12,6 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Plus, Users, Copy, Check, MapPin, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/Layout';
+import LeagueDirectory from '@/components/leagues/LeagueDirectory';
+import AdminRequestBar from '@/components/leagues/AdminRequestBar';
+import AdminRequestPanel from '@/components/leagues/AdminRequestPanel';
 
 interface League {
   id: string;
@@ -34,6 +37,7 @@ const Leagues = () => {
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -256,6 +260,9 @@ const Leagues = () => {
           </div>
         </div>
 
+        {/* Admin Request Bar - only shows for league admins */}
+        <AdminRequestBar onOpenRequestPanel={() => setAdminPanelOpen(true)} />
+
         {/* Active League Selection */}
         {leagues.length > 0 && (
           <div className="mb-8">
@@ -464,6 +471,17 @@ const Leagues = () => {
             </div>
           )}
         </div>
+
+        {/* League Directory Section */}
+        <div className="mt-12">
+          <LeagueDirectory />
+        </div>
+
+        {/* Admin Request Panel */}
+        <AdminRequestPanel 
+          isOpen={adminPanelOpen} 
+          onClose={() => setAdminPanelOpen(false)} 
+        />
       </div>
       </div>
     </Layout>

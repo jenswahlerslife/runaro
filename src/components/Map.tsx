@@ -104,7 +104,7 @@ const Map: React.FC = () => {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [showArea, setShowArea] = useState<[number, number] | null>(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+  const [mapStyle, setMapStyle] = useState<MapStyle>('light');
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [loading, setLoading] = useState(true);
   const mapRef = useRef<LeafletMap | null>(null);

@@ -1,0 +1,25 @@
+{
+  "recommendations": [
+    "pmneo.tsimporter",
+    "formulahendry.auto-rename-tag", 
+    "dsznajder.es7-react-js-snippets",
+    "OfHumanBondage.react-proptypes-intellisense",
+    "bradlc.vscode-tailwindcss",
+    "clinyong.vscode-css-modules",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "rangav.vscode-thunder-client",
+    "ritwickdey.liveserver",
+    "christian-kohler.path-intellisense",
+    "steoates.autoimport",
+    "antfu.vite",
+    "antfu.react-hooks-snippets",
+    "csstools.postcss",
+    "PKief.material-icon-theme",
+    "zhuangtongfa.Material-theme",
+    "oderwat.indent-rainbow"
+  ]
+}

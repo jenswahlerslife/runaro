@@ -1,0 +1,5 @@
+# Requirements for Claude Code Screenshot Tool
+pillow>=9.0.0          # Image processing and screenshot capture
+pystray>=0.19.0        # System tray icon
+keyboard>=0.13.0       # Global hotkey support  
+plyer>=2.1.0          # Cross-platform notifications

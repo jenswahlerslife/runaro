@@ -1,0 +1,20 @@
+# RUNARO AUTO-DEPLOY CONFIGURATION
+# Dette setup sikrer at alle ændringer automatisk deployes
+
+# Default kommandoer efter hver ændring
+AUTO_DEPLOY=true
+AUTO_BUILD=true
+AUTO_MIGRATE=true
+
+# Kommandoer der skal køres
+DEPLOY_COMMAND="npm run deploy"
+BUILD_COMMAND="npm run build"
+MIGRATE_COMMAND="node deploy.js"
+
+# Automatisk kør følgende efter kode ændringer:
+# 1. Build projektet
+# 2. Kør Supabase migrationer
+# 3. Deploy til Cloudflare
+# 4. Verificer deployment
+
+# Brug: npm run deploy (kører alt automatisk)
