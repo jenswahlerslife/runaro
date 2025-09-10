@@ -315,36 +315,15 @@ export default function LeaguesPage() {
             </Link>
           </div>
 
-          {/* Centered Title with Admin Icon */}
-          <div className="flex items-center justify-center relative">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
-                <Trophy className="h-8 w-8 text-primary" />
-                Territory Leagues
-              </h1>
-              <p className="text-muted-foreground">
-                Join or create competitive running leagues
-              </p>
-            </div>
-            
-            {/* Admin Icon with Badge - positioned absolutely */}
-            {adminLeagues.length > 0 && (
-              <div className="absolute right-0 top-0">
-                <button
-                  onClick={openRequestPanelForAll}
-                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-xl border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-colors"
-                  aria-label={`View admin requests (${totalPendingCount} pending)`}
-                  title={`Admin panel - ${totalPendingCount} pending requests`}
-                >
-                  <Crown className="h-6 w-6 text-primary" />
-                  {totalPendingCount > 0 && (
-                    <span className="absolute -right-2 -top-2 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white shadow-lg">
-                      {totalPendingCount > 99 ? '99+' : totalPendingCount}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
+          {/* Centered Title */}
+          <div className="text-center">
+            <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
+              <Trophy className="h-8 w-8 text-primary" />
+              Territory Leagues
+            </h1>
+            <p className="text-muted-foreground">
+              Join or create competitive running leagues
+            </p>
           </div>
 
           {/* Action Buttons */}
@@ -501,10 +480,18 @@ export default function LeaguesPage() {
                         <Trophy className="h-5 w-5" />
                         {league.name}
                         {league.is_admin && (
-                          <Badge variant="secondary">
-                            <Crown className="h-3 w-3 mr-1" />
-                            Admin
-                          </Badge>
+                          <button
+                            onClick={() => openRequestPanel(league.id, league.name)}
+                            className="relative inline-flex items-center justify-center p-1 rounded hover:bg-blue-50 transition-colors"
+                            title={`Admin panel ${league.pending_requests_count ? `- ${league.pending_requests_count} pending requests` : ''}`}
+                          >
+                            <Crown className="h-4 w-4 text-blue-600" />
+                            {league.pending_requests_count && league.pending_requests_count > 0 && (
+                              <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                                {league.pending_requests_count > 9 ? '9+' : league.pending_requests_count}
+                              </span>
+                            )}
+                          </button>
                         )}
                       </CardTitle>
                       <CardDescription className="mt-1">
