@@ -36,11 +36,12 @@ const Index = () => {
             console.log('Profile missing for user, creating self-heal profile...');
             try {
               await supabase.from('profiles').upsert({
-                user_id: user.id,
+                id: user.id,  // Use 'id' not 'user_id'
+                user_id: user.id,  // Keep user_id in sync for compatibility
                 username: user.user_metadata?.username ?? null,
                 display_name: user.user_metadata?.display_name ?? null,
                 // age is handled by the database trigger from metadata
-              }, { onConflict: 'user_id' });
+              }, { onConflict: 'id' });  // Use 'id' as conflict target
               
               // Refetch after creation
               const { data: newProf } = await supabase

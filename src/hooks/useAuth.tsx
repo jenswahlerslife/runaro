@@ -26,12 +26,13 @@ const ensureProfileExists = async (user: User) => {
     await supabase
       .from('profiles')
       .upsert({
-        user_id: user.id,
+        id: user.id,  // Use 'id' not 'user_id'
+        user_id: user.id,  // Keep user_id in sync for compatibility
         username,
         display_name: displayName,
         age: age,
       }, { 
-        onConflict: 'user_id',
+        onConflict: 'id',  // Use 'id' as conflict target
         ignoreDuplicates: false 
       });
 

@@ -12,7 +12,7 @@ async function ensureUserProfile() {
   let profile = null;
   const { data: existingProfile, error: profileError } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, user_id')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -27,11 +27,12 @@ async function ensureUserProfile() {
     const { data: newProfile, error: createError } = await supabase
       .from('profiles')
       .insert([{
-        user_id: user.id,
+        id: user.id,  // Use id as primary key
+        user_id: user.id,  // Keep user_id for compatibility
         username: user.email?.split('@')[0] || 'user',
         display_name: user.email?.split('@')[0] || 'User',
       }])
-      .select('id')
+      .select('id, user_id')
       .single();
 
     if (createError) throw createError;
@@ -193,12 +194,11 @@ export async function getUserLeagues(): Promise<League[]> {
 
     if (adminError) throw adminError;
 
-    // Get league IDs where user is an approved member
+    // Get league IDs where user is a member (no status filter - league_members doesn't have status column)
     const { data: membershipData, error: membershipError } = await supabase
       .from('league_members')
-      .select('league_id')
-      .eq('user_id', profile.id)
-      .eq('status', 'approved');
+      .select('league_id, role')
+      .eq('user_id', profile.id);
 
     if (membershipError) throw membershipError;
 
@@ -224,16 +224,20 @@ export async function getUserLeagues(): Promise<League[]> {
     // Enhance with additional info
     const enhancedLeagues: League[] = [];
     for (const league of uniqueLeagues) {
-      // Count members
+      // Count members (remove status filter)
       const { count: memberCount } = await supabase
         .from('league_members')
         .select('*', { count: 'exact', head: true })
-        .eq('league_id', league.id)
-        .eq('status', 'approved');
+        .eq('league_id', league.id);
+
+      // Check if user is admin based on role in league_members or admin_user_id
+      const userMembership = membershipData?.find(m => m.league_id === league.id);
+      const isAdmin = league.admin_user_id === profile.id || 
+                     (userMembership && ['owner', 'admin'].includes(userMembership.role));
 
       // Count pending requests for admin leagues
       let pendingRequestsCount = 0;
-      if (league.admin_user_id === profile.id) {
+      if (isAdmin) {
         const { count: pendingCount } = await supabase
           .from('league_join_requests')
           .select('*', { count: 'exact', head: true })
@@ -246,7 +250,7 @@ export async function getUserLeagues(): Promise<League[]> {
       enhancedLeagues.push({
         ...league,
         member_count: memberCount || 0,
-        is_admin: league.admin_user_id === profile.id,
+        is_admin: isAdmin,
         membership_status: 'approved',
         pending_requests_count: pendingRequestsCount
       });
@@ -428,7 +432,7 @@ export async function getUserActivitiesForBase(afterDate?: string): Promise<any[
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, user_id')
       .eq('user_id', user.id)
       .single();
 
