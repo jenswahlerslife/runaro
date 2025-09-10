@@ -72,13 +72,25 @@ export default function LeagueMembers() {
 
       if (leagueError) throw leagueError;
       
-      // Check if user is admin
-      const userIsAdmin = league.admin_user_id === user.id;
-      setIsAdmin(userIsAdmin);
+      // Check if user is admin by looking up their role in league_members
+      const { data: userRole, error: roleError } = await supabase
+        .from('league_members')
+        .select('role')
+        .eq('league_id', leagueId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error checking user role:', roleError);
+        // If we can't check role, assume not admin
+      }
+
+      const userIsAdmin = userRole && ['admin', 'owner'].includes(userRole.role);
+      setIsAdmin(userIsAdmin || false);
       
       // Load members
       const { data: membersData, error: membersError } = await supabase
-        .from('league_memberships')
+        .from('league_members')
         .select(`
           id,
           user_id,
@@ -235,11 +247,11 @@ export default function LeagueMembers() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Liga ikke fundet</h2>
-            <p className="text-muted-foreground mb-4">Ligaen kunne ikke findes eller du har ikke adgang</p>
+            <p className="text-muted-foreground mb-4">Ligaen kunne være slettet, eller du har ikke adgang.</p>
             <Link to="/leagues">
               <Button variant="outline">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Tilbage til ligaer
+                Tilbage til leagues-siden
               </Button>
             </Link>
           </div>

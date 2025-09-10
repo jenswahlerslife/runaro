@@ -481,7 +481,7 @@ export default function LeaguesPage() {
                         {league.name}
                         {league.is_admin && (
                           <button
-                            onClick={() => openRequestPanel(league.id, league.name)}
+                            onClick={() => navigate(`/leagues/${league.id}/members`)}
                             className="relative inline-flex items-center justify-center p-1 rounded hover:bg-blue-50 transition-colors"
                             title={`Admin panel ${league.pending_requests_count ? `- ${league.pending_requests_count} pending requests` : ''}`}
                           >
