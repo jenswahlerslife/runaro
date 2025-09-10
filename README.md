@@ -72,6 +72,53 @@ Complete OAuth 2.0 flow with:
 - Point calculation system
 - Database persistence
 
+## 🔒 Security & Performance Hardening
+
+The database has been hardened with comprehensive security and performance optimizations:
+
+### Security Measures
+- **RLS (Row Level Security)** enabled on all application tables
+- **Function Security**: All stored procedures use `SECURITY DEFINER` with locked `search_path`
+- **PostGIS Security**: System tables secured from unauthorized access
+- **Privilege Management**: Minimal privileges granted to `anon`/`authenticated` roles
+- **Secure Policies**: Fine-grained access control policies for data protection
+
+### Performance Optimizations
+- **Strategic Indexing**: Foreign key, status, and composite indexes for common queries
+- **Partial Indexes**: Optimized indexes for filtered queries (pending requests, admin roles)
+- **Query Optimization**: Updated table statistics and index hints
+- **Text Search**: Case-insensitive search indexes for league discovery
+
+### How to Add New Functions Securely
+When creating new stored procedures:
+
+```sql
+CREATE OR REPLACE FUNCTION public.your_function(param uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER  -- Important!
+SET search_path = public, pg_temp  -- Lock search_path
+AS $$
+BEGIN
+  -- Your logic here
+END;
+$$;
+
+-- Set proper ownership and privileges
+ALTER FUNCTION public.your_function(uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.your_function(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.your_function(uuid) TO authenticated;
+```
+
+### Verification
+Run the verification script to check security status:
+```bash
+# Check current security status
+npm run db:status
+```
+
+See `supabase/verification/after_hardening.sql` for detailed verification queries.
+
 ## 🤝 Contributing
 
 This project was built with assistance from Claude Code for rapid development and debugging.

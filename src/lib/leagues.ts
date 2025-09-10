@@ -57,6 +57,7 @@ export interface League {
   member_count?: number;
   is_admin?: boolean;
   membership_status?: string;
+  pending_requests_count?: number;
 }
 
 export interface LeagueMember {
@@ -230,11 +231,24 @@ export async function getUserLeagues(): Promise<League[]> {
         .eq('league_id', league.id)
         .eq('status', 'approved');
 
+      // Count pending requests for admin leagues
+      let pendingRequestsCount = 0;
+      if (league.admin_user_id === profile.id) {
+        const { count: pendingCount } = await supabase
+          .from('league_join_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('league_id', league.id)
+          .eq('status', 'pending');
+        
+        pendingRequestsCount = pendingCount || 0;
+      }
+
       enhancedLeagues.push({
         ...league,
         member_count: memberCount || 0,
         is_admin: league.admin_user_id === profile.id,
-        membership_status: 'approved'
+        membership_status: 'approved',
+        pending_requests_count: pendingRequestsCount
       });
     }
 

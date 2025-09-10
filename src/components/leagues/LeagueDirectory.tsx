@@ -107,15 +107,15 @@ const LeagueDirectory: React.FC = () => {
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Join request sent to the league admin",
+        title: "Anmodning sendt",
+        description: "Din anmodning er sendt til liga-administratoren",
       });
       queryClient.invalidateQueries({ queryKey: ['user-join-requests'] });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to send join request",
+        title: "Fejl",
+        description: error.message || "Kunne ikke sende anmodning",
         variant: "destructive",
       });
     },
@@ -232,11 +232,11 @@ const LeagueDirectory: React.FC = () => {
                   <div className="ml-4">
                     {buttonState === 'joined' ? (
                       <Button disabled variant="outline" size="sm">
-                        Joined
+                        Tilmeldt
                       </Button>
                     ) : buttonState === 'requested' ? (
                       <Button disabled variant="outline" size="sm">
-                        Requested
+                        Anmodet
                       </Button>
                     ) : (
                       <Button
@@ -244,7 +244,7 @@ const LeagueDirectory: React.FC = () => {
                         disabled={joinLeagueMutation.isPending}
                         size="sm"
                       >
-                        {joinLeagueMutation.isPending ? 'Joining...' : 'Join'}
+                        {joinLeagueMutation.isPending ? 'Tilmelder...' : 'Tilmeld'}
                       </Button>
                     )}
                   </div>

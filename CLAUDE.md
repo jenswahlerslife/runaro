@@ -11,6 +11,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run lint` - Run ESLint
 - `npm run preview` - Preview production build
 
+**Database Operations (Supabase):**
+- `npm run db:status` - Check migration status
+- `npm run db:push` - Push local migrations to remote database
+- `npm run db:pull` - Pull remote database schema to local
+- `npm run db:new` - Create new migration file
+- `npm run db:setup` - Initial database setup (login and link project)
+- `npm run db:deploy` - Deploy all pending migrations
+- `npm run db:env` - Load environment variables for database operations
+
 **Deployment & Cloudflare:**
 - `npm run deploy` - Full deployment script 
 - `npm run deploy:quick` - Quick build and deploy to Cloudflare
@@ -68,7 +77,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Core Tables:**
 - `profiles` - User profiles with username, display_name, age (age not exposed to UI)
 - `activities` - Running activities with GPX data and territory coordinates
-- `leagues` - Multiplayer league system
+- `leagues` - Multiplayer league system with join request functionality
+- `league_join_requests` - Pending league join requests with admin approval
 - `games` - Individual game instances with territory tracking
 - `league_memberships` - League membership management
 - `player_bases` - Player starting positions in territory games
@@ -76,9 +86,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Key Features:**
 - PostGIS integration for geospatial territory calculations
-- RLS (Row Level Security) policies for data access
+- RLS (Row Level Security) policies with comprehensive security hardening
 - Edge Functions for Strava OAuth and activity processing
 - Auto-generated TypeScript types in `src/integrations/supabase/types.ts`
+- Security-first function design with `SECURITY DEFINER` and locked `search_path`
+- Performance optimized with strategic indexing and partial indexes
 
 ### Territory Game System
 - Geospatial territory calculation using PostGIS
@@ -109,22 +121,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical Files:**
 - `public/_redirects` - Essential for Strava OAuth callbacks on Cloudflare Pages
-- `supabase/migrations/` - Database schema evolution (30+ migration files)
+- `supabase/migrations/` - Database schema evolution (40+ migration files)
+- `supabase/config.toml` - Supabase project configuration with auth settings
 - `src/integrations/supabase/client.ts` - Supabase client configuration
 - `src/integrations/supabase/types.ts` - Auto-generated TypeScript types
-- `src/hooks/useAuth.tsx` - Central authentication logic
+- `src/hooks/useAuth.tsx` - Central authentication logic with profile management
 - `src/types/ui.ts` - UI-safe types that exclude sensitive data like age
+- `src/components/leagues/` - League management UI components
+- `src/lib/leagues.ts` - League business logic and API functions
 
 ## Development Workflow
 
 When working on this codebase:
 
 1. **Run development server:** `npm run dev` (starts on localhost:8080)
-2. **For database changes:** Use Supabase migrations, then regenerate types
+2. **For database changes:** Use `npm run db:new` to create migration, then `npm run db:push` to deploy
 3. **For Strava testing:** Use `/debug/strava` page for OAuth flow testing
 4. **For deployment:** Use `npm run deploy:quick` for fastest deployment to Cloudflare
 5. **Always run `npm run lint`** before committing changes
 6. **Territory features require PostGIS** - ensure database has geospatial extensions enabled
+7. **Database setup:** Run `npm run db:setup` once to configure Supabase CLI connection
 
 ## Profile Data Security
 
@@ -155,6 +171,20 @@ When working on this codebase:
 - Status monitoring via Wrangler CLI
 - Production URL: https://runaro.dk
 - Preview deployments: https://{deployment-id}.runaro.pages.dev
+
+## Database Security & Performance
+
+**Security Requirements:**
+- All new database functions MUST use `SECURITY DEFINER` with locked `search_path = public, pg_temp`
+- Grant minimal privileges: `REVOKE ALL FROM PUBLIC, anon` then `GRANT EXECUTE TO authenticated`
+- Never query `age` field in UI components - use `UIProfileSelect` type from `src/types/ui.ts`
+- Test all functions with comprehensive RLS policy verification
+
+**League System Architecture:**
+- Join requests flow: User submits → Admin approves → Automatic membership creation
+- AdminRequestPanel component handles pending requests with real-time updates
+- LeagueDirectory provides public league discovery with join functionality
+- All league operations secured with user-specific RLS policies
 
 ## Engine Requirements
 

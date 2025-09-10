@@ -44,7 +44,8 @@
       "WebFetch(domain:44e02a07.runaro.pages.dev)",
       "Bash(move claude_supabase_manager.js claude_supabase_manager.cjs)",
       "Bash(move auto_credential_updater.js auto_credential_updater.cjs)",
-      "Bash(ren:*)"
+      "Bash(ren:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []

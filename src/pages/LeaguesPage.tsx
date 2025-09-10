@@ -9,7 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Plus, Users, Trophy, Key, Crown, Clock, Play } from 'lucide-react';
+import { ArrowLeft, Plus, Users, Trophy, Key, Crown, Clock, Play, Bell } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import LeagueDirectory from '@/components/leagues/LeagueDirectory';
+import AdminRequestPanel from '@/components/leagues/AdminRequestPanel';
 import { 
   League, 
   Game,
@@ -28,8 +32,11 @@ export default function LeaguesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [gameDialogOpen, setGameDialogOpen] = useState(false);
+  const [requestPanelOpen, setRequestPanelOpen] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
+  const [selectedLeagueName, setSelectedLeagueName] = useState<string>('');
   const [games, setGames] = useState<Game[]>([]);
+  const [adminLeagues, setAdminLeagues] = useState<League[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -62,10 +69,14 @@ export default function LeaguesPage() {
     try {
       const userLeagues = await getUserLeagues();
       setLeagues(userLeagues);
+      
+      // Filter admin leagues for request counting
+      const adminLeaguesList = userLeagues.filter(league => league.is_admin);
+      setAdminLeagues(adminLeaguesList);
     } catch (error) {
       console.error('Error fetching leagues:', error);
       toast({
-        title: "Error loading leagues",
+        title: "Fejl ved indlæsning af ligaer",
         description: String(error),
         variant: "destructive",
       });
@@ -88,6 +99,27 @@ export default function LeaguesPage() {
     }
   };
 
+  // Get total pending requests count for all admin leagues
+  const { data: totalPendingCount = 0 } = useQuery({
+    queryKey: ['admin-pending-count'],
+    queryFn: async () => {
+      if (adminLeagues.length === 0) return 0;
+      
+      let totalCount = 0;
+      for (const league of adminLeagues) {
+        const { data, error } = await supabase.rpc('get_admin_pending_requests_count', {
+          league_id: league.id
+        });
+        if (!error && typeof data === 'number') {
+          totalCount += data;
+        }
+      }
+      return totalCount;
+    },
+    enabled: adminLeagues.length > 0,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
   useEffect(() => {
     fetchLeagues();
   }, []);
@@ -95,8 +127,8 @@ export default function LeaguesPage() {
   const handleCreateLeague = async () => {
     if (!newLeague.name.trim()) {
       toast({
-        title: "Name required",
-        description: "Please enter a league name",
+        title: "Navn påkrævet",
+        description: "Indtast venligst et navn til ligaen",
         variant: "destructive",
       });
       return;
@@ -112,22 +144,22 @@ export default function LeaguesPage() {
 
       if (result.success) {
         toast({
-          title: "League created!",
-          description: `Invite code: ${result.invite_code}`,
+          title: "Liga oprettet!",
+          description: `Invitationskode: ${result.invite_code}`,
         });
         setCreateDialogOpen(false);
         setNewLeague({ name: '', description: '', isPublic: false, maxMembers: 10 });
         fetchLeagues();
       } else {
         toast({
-          title: "Error creating league",
+          title: "Fejl ved oprettelse af liga",
           description: result.error,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error creating league",
+        title: "Fejl ved oprettelse af liga",
         description: String(error),
         variant: "destructive",
       });
@@ -137,8 +169,8 @@ export default function LeaguesPage() {
   const handleJoinLeague = async () => {
     if (!inviteCode.trim()) {
       toast({
-        title: "Invite code required",
-        description: "Please enter an invite code",
+        title: "Invitationskode påkrævet",
+        description: "Indtast venligst en invitationskode",
         variant: "destructive",
       });
       return;
@@ -149,7 +181,7 @@ export default function LeaguesPage() {
 
       if (result.success) {
         toast({
-          title: "League joined!",
+          title: "Tilmeldt liga!",
           description: `${result.league_name} - Status: ${result.status}`,
         });
         setJoinDialogOpen(false);
@@ -157,14 +189,14 @@ export default function LeaguesPage() {
         fetchLeagues();
       } else {
         toast({
-          title: "Error joining league",
+          title: "Fejl ved tilmelding til liga",
           description: result.error,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error joining league",
+        title: "Fejl ved tilmelding til liga",
         description: String(error),
         variant: "destructive",
       });
@@ -174,8 +206,8 @@ export default function LeaguesPage() {
   const handleCreateGame = async () => {
     if (!newGameName.trim()) {
       toast({
-        title: "Game name required",
-        description: "Please enter a game name",
+        title: "Spilnavn påkrævet",
+        description: "Indtast venligst et navn til spillet",
         variant: "destructive",
       });
       return;
@@ -186,22 +218,22 @@ export default function LeaguesPage() {
 
       if (result.success) {
         toast({
-          title: "Game created!",
-          description: `${result.game_name} with ${result.member_count} potential players`,
+          title: "Spil oprettet!",
+          description: `${result.game_name} med ${result.member_count} potentielle spillere`,
         });
         setGameDialogOpen(false);
         setNewGameName('');
         fetchLeagueGames(selectedLeagueId);
       } else {
         toast({
-          title: "Error creating game",
+          title: "Fejl ved oprettelse af spil",
           description: result.error,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error creating game",
+        title: "Fejl ved oprettelse af spil",
         description: String(error),
         variant: "destructive",
       });
@@ -214,20 +246,20 @@ export default function LeaguesPage() {
 
       if (result.success) {
         toast({
-          title: "Game started!",
-          description: `30-day competition with ${result.base_count} players`,
+          title: "Spil startet!",
+          description: `30-dages konkurrence med ${result.base_count} spillere`,
         });
         fetchLeagueGames(selectedLeagueId);
       } else {
         toast({
-          title: "Error starting game",
+          title: "Fejl ved start af spil",
           description: result.error,
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error starting game",
+        title: "Fejl ved start af spil",
         description: String(error),
         variant: "destructive",
       });
@@ -238,6 +270,21 @@ export default function LeaguesPage() {
     setSelectedLeagueId(leagueId);
     fetchLeagueGames(leagueId);
     setGameDialogOpen(true);
+  };
+
+  const openRequestPanel = (leagueId: string, leagueName: string) => {
+    setSelectedLeagueId(leagueId);
+    setSelectedLeagueName(leagueName);
+    setRequestPanelOpen(true);
+  };
+
+  const openRequestPanelForAll = () => {
+    // For multi-league admin panel, use first admin league as primary
+    if (adminLeagues.length > 0) {
+      setSelectedLeagueId(adminLeagues[0].id);
+      setSelectedLeagueName('Alle ligaer');
+      setRequestPanelOpen(true);
+    }
   };
 
   if (loading) {
@@ -257,16 +304,21 @@ export default function LeaguesPage() {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="space-y-6">
+          {/* Back button */}
+          <div className="flex justify-start">
             <Link to="/">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Home
               </Button>
             </Link>
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
+          </div>
+
+          {/* Centered Title with Admin Icon */}
+          <div className="flex items-center justify-center relative">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
                 <Trophy className="h-8 w-8 text-primary" />
                 Territory Leagues
               </h1>
@@ -274,8 +326,29 @@ export default function LeaguesPage() {
                 Join or create competitive running leagues
               </p>
             </div>
+            
+            {/* Admin Icon with Badge - positioned absolutely */}
+            {adminLeagues.length > 0 && (
+              <div className="absolute right-0 top-0">
+                <button
+                  onClick={openRequestPanelForAll}
+                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-xl border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  aria-label={`View admin requests (${totalPendingCount} pending)`}
+                  title={`Admin panel - ${totalPendingCount} pending requests`}
+                >
+                  <Crown className="h-6 w-6 text-primary" />
+                  {totalPendingCount > 0 && (
+                    <span className="absolute -right-2 -top-2 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white shadow-lg">
+                      {totalPendingCount > 99 ? '99+' : totalPendingCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
-          <div className="flex gap-2">
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-center">
             <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -366,6 +439,36 @@ export default function LeaguesPage() {
           </div>
         </div>
 
+        {/* Admin Request Bar */}
+        {adminLeagues.length > 0 && totalPendingCount > 0 && (
+          <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900/30">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                    <Bell className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-yellow-800 dark:text-yellow-300">
+                      Ventende anmodninger
+                    </h3>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                      Du har {totalPendingCount} ventende anmodning{totalPendingCount !== 1 ? 'er' : ''} til dine ligaer
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={openRequestPanelForAll}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Se anmodninger ({totalPendingCount})
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Leagues Grid */}
         {leagues.length === 0 ? (
           <Card>
@@ -433,11 +536,16 @@ export default function LeaguesPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => navigate(`/leagues/${league.id}`)}
-                        className="flex-1"
+                        onClick={() => navigate(`/leagues/${league.id}/members`)}
+                        className="flex-1 relative"
                       >
                         <Users className="h-4 w-4 mr-1" />
                         Members
+                        {league.is_admin && league.pending_requests_count && league.pending_requests_count > 0 && (
+                          <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                            {league.pending_requests_count > 9 ? '9+' : league.pending_requests_count}
+                          </span>
+                        )}
                       </Button>
                       {league.is_admin && (
                         <Button 
@@ -456,6 +564,11 @@ export default function LeaguesPage() {
             ))}
           </div>
         )}
+
+        {/* League Directory */}
+        <div className="space-y-4">
+          <LeagueDirectory />
+        </div>
 
         {/* Games Dialog */}
         <Dialog open={gameDialogOpen} onOpenChange={setGameDialogOpen}>
@@ -538,6 +651,14 @@ export default function LeaguesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Admin Request Panel */}
+        <AdminRequestPanel 
+          isOpen={requestPanelOpen}
+          onOpenChange={setRequestPanelOpen}
+          leagueId={selectedLeagueId}
+          leagueName={selectedLeagueName}
+        />
       </div>
     </Layout>
   );

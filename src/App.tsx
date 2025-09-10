@@ -20,6 +20,7 @@ import StravaDebug from "./pages/StravaDebug";
 import StravaLocalTest from "./pages/StravaLocalTest";
 import StravaTestFlow from "./pages/StravaTestFlow";
 import AuthCallback from "./pages/AuthCallback";
+import LeagueMembers from "./pages/LeagueMembers";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/activities" element={<ActivitiesPage />} />
             <Route path="/leagues" element={<LeaguesPage />} />
+            <Route path="/leagues/:leagueId/members" element={<LeagueMembers />} />
             <Route path="/games/:gameId" element={<GamePage />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/auth/strava/callback" element={<StravaCallback />} />
