@@ -50,7 +50,8 @@
       "Read(//c/tmp/**)",
       "Bash(tree:*)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:f39ba855.runaro.pages.dev)"
     ],
     "deny": [],
     "ask": []
