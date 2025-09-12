@@ -271,12 +271,12 @@ export default function LeagueMembers() {
       });
       
       if (error) {
-        console.error('❌ RPC error:', {
+        console.error('❌ RPC approve_join_request failed:', {
           message: error.message,
-          details: error.details,
-          hint: error.hint,
+          details: (error as any).details,
+          hint: (error as any).hint,
           code: error.code,
-          error: error
+          fullError: error
         });
         throw error;
       }
@@ -334,12 +334,12 @@ export default function LeagueMembers() {
       });
       
       if (error) {
-        console.error('❌ RPC error:', {
+        console.error('❌ RPC decline_join_request failed:', {
           message: error.message,
-          details: error.details,
-          hint: error.hint,
+          details: (error as any).details,
+          hint: (error as any).hint,
           code: error.code,
-          error: error
+          fullError: error
         });
         throw error;
       }
