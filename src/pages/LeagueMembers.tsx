@@ -271,7 +271,13 @@ export default function LeagueMembers() {
       });
       
       if (error) {
-        console.error('❌ RPC error:', error);
+        console.error('❌ RPC error:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          error: error
+        });
         throw error;
       }
 
@@ -328,7 +334,13 @@ export default function LeagueMembers() {
       });
       
       if (error) {
-        console.error('❌ RPC error:', error);
+        console.error('❌ RPC error:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          error: error
+        });
         throw error;
       }
 
