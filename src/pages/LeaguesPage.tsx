@@ -421,35 +421,6 @@ export default function LeaguesPage() {
           </div>
         </div>
 
-        {/* Admin Request Bar */}
-        {adminLeagues.length > 0 && totalPendingCount > 0 && (
-          <Card className="bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900/30">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                    <Bell className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-yellow-800 dark:text-yellow-300">
-                      Ventende anmodninger
-                    </h3>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      Du har {totalPendingCount} ventende anmodning{totalPendingCount !== 1 ? 'er' : ''} til dine ligaer
-                    </p>
-                  </div>
-                </div>
-                <Button 
-                  onClick={openRequestPanelForAll}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Se anmodninger ({totalPendingCount})
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Leagues Grid */}
         {leagues.length === 0 ? (

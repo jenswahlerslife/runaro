@@ -133,18 +133,42 @@ export default function LeagueMembers() {
 
       // 4) Hent join requests KUN hvis admin/owner
       if (userIsAdmin) {
-        const { data: requestsData, error: requestsError } = await supabase
-          .from('league_join_requests_view')
-          .select('id, user_id, display_name, created_at')
+        // Step 1: Hent rå join requests (uden JOIN til profiles)
+        const { data: rawRequests, error: requestsError } = await supabase
+          .from('league_join_requests')
+          .select('id, user_id, created_at')
           .eq('league_id', leagueId)
           .eq('status', 'pending')
           .order('created_at', { ascending: true });
 
         if (requestsError) {
           console.error('Error loading requests:', requestsError);
-          // Don't throw here - requests are optional for admins
+          setRequests([]);
+        } else if (!rawRequests || rawRequests.length === 0) {
+          setRequests([]);
         } else {
-          setRequests(requestsData || []);
+          // Step 2: Hent profiler for disse user_ids (best-effort)
+          const userIds = Array.from(new Set(rawRequests.map(r => r.user_id)));
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, username')
+            .in('user_id', userIds);
+
+          // Step 3: Map profiles til requests
+          const profilesById = Object.fromEntries(
+            (profiles || []).map(p => [p.user_id, p])
+          );
+          
+          const requestsWithNames = rawRequests.map(r => ({
+            id: r.id,
+            user_id: r.user_id,
+            created_at: r.created_at,
+            display_name: profilesById[r.user_id]?.display_name || 
+                         profilesById[r.user_id]?.username || 
+                         'Ukendt bruger'
+          }));
+
+          setRequests(requestsWithNames);
         }
       } else {
         setRequests([]);
@@ -215,11 +239,31 @@ export default function LeagueMembers() {
 
   const approveRequest = async (request: JoinRequest) => {
     setActionLoading(request.id);
+    
+    // Optimistisk opdatering: fjern request og tilføj medlem med det samme
+    const optimisticMember: Member = {
+      id: `temp-${request.user_id}`, // temp ID
+      user_id: request.user_id,
+      display_name: request.display_name,
+      role: 'member',
+      joined_at: new Date().toISOString()
+    };
+    
+    // Opdater UI optimistisk
+    const originalRequests = [...requests];
+    const originalMembers = [...members];
+    
+    setRequests(prev => prev.filter(r => r.id !== request.id));
+    setMembers(prev => [...prev, optimisticMember]);
+    
     try {
-      const result = await manageLeagueMembership(leagueId!, request.user_id, 'approve');
+      const { error } = await supabase.rpc('approve_join_request', {
+        request_id: request.id
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to approve request');
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
       }
 
       toast({
@@ -227,13 +271,23 @@ export default function LeagueMembers() {
         description: `${request.display_name} er nu medlem af ligaen`,
       });
 
-      // Reload data
+      // Reload data for at få rigtige IDs og opdateret data
       loadData();
-    } catch (error) {
-      console.error('Error approving request:', error);
+    } catch (error: any) {
+      // Rollback optimistisk opdatering ved fejl
+      setRequests(originalRequests);
+      setMembers(originalMembers);
+      
+      console.error('Error approving request:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        error
+      });
       toast({
         title: "Fejl ved godkendelse",
-        description: String(error),
+        description: error?.message || String(error),
         variant: "destructive",
       });
     } finally {
@@ -243,11 +297,19 @@ export default function LeagueMembers() {
 
   const rejectRequest = async (request: JoinRequest) => {
     setActionLoading(request.id);
+    
+    // Optimistisk opdatering: fjern request med det samme
+    const originalRequests = [...requests];
+    setRequests(prev => prev.filter(r => r.id !== request.id));
+    
     try {
-      const result = await manageLeagueMembership(leagueId!, request.user_id, 'reject');
+      const { error } = await supabase.rpc('decline_join_request', {
+        request_id: request.id
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to reject request');
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
       }
 
       toast({
@@ -255,13 +317,22 @@ export default function LeagueMembers() {
         description: `Anmodning fra ${request.display_name} er afvist`,
       });
 
-      // Reload data
+      // Reload data for at sikre konsistens
       loadData();
-    } catch (error) {
-      console.error('Error rejecting request:', error);
+    } catch (error: any) {
+      // Rollback optimistisk opdatering ved fejl
+      setRequests(originalRequests);
+      
+      console.error('Error rejecting request:', {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code,
+        error
+      });
       toast({
         title: "Fejl ved afvisning",
-        description: String(error),
+        description: error?.message || String(error),
         variant: "destructive",
       });
     } finally {
@@ -553,7 +624,7 @@ export default function LeagueMembers() {
                           disabled={actionLoading === request.id}
                         >
                           <Check className="mr-1 h-4 w-4" />
-                          Godkend
+                          Accepter
                         </Button>
                         <Button
                           size="sm"
