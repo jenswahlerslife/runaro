@@ -12,42 +12,21 @@ export interface MyLeague {
 }
 
 export function useMyLeagues() {
-  const { user } = useAuth();
-
   return useQuery({
-    queryKey: ['my-leagues', user?.id],
-    enabled: !!user,
+    queryKey: ['my-leagues'], // Stable key, no user dependency needed for RPC
     queryFn: async (): Promise<MyLeague[]> => {
-      // Step 1: Get memberships for current user (works with RLS: user_id = auth.uid())
-      const { data: memberships, error: memErr } = await supabase
-        .from('league_members')
-        .select('league_id, role')
-        .eq('user_id', user!.id);
-
-      if (memErr) throw memErr;
+      console.debug('🔄 Calling list_my_leagues_with_role RPC...');
       
-      const leagueIds = Array.from(new Set((memberships ?? []).map(m => m.league_id)));
-      if (leagueIds.length === 0) return [];
+      const { data, error } = await supabase.rpc('list_my_leagues_with_role');
+      
+      if (error) {
+        console.error('❌ RPC list_my_leagues_with_role failed:', error);
+        throw error;
+      }
 
-      // Step 2: Fetch those leagues directly
-      const { data: leagues, error: leaguesErr } = await supabase
-        .from('leagues')
-        .select('id, name, description, invite_code, created_at')
-        .in('id', leagueIds)
-        .order('created_at', { ascending: false });
-
-      if (leaguesErr) throw leaguesErr;
-
-      // Step 3: Combine leagues with roles
-      const leaguesWithRoles: MyLeague[] = (leagues ?? []).map(league => {
-        const membership = memberships?.find(m => m.league_id === league.id);
-        return {
-          ...league,
-          role: membership?.role as 'owner' | 'admin' | 'member'
-        };
-      });
-
-      return leaguesWithRoles;
+      console.debug('✅ My leagues RPC result:', data);
+      
+      return (data || []) as MyLeague[];
     },
   });
 }

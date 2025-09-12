@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useQueryClient } from '@tanstack/react-query';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,7 @@ interface League {
 export default function LeagueMembers() {
   const { leagueId } = useParams<{ leagueId: string }>();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -290,6 +292,9 @@ export default function LeagueMembers() {
       // Reload data for at få rigtige IDs og opdateret data
       console.log('🔄 Reloading data...');
       await loadData();
+      
+      // Also invalidate my-leagues query so "Your leagues" panel updates
+      queryClient.invalidateQueries({ queryKey: ['my-leagues'] });
       console.log('✅ Data reloaded');
     } catch (error: any) {
       // Rollback optimistisk opdatering ved fejl
@@ -353,6 +358,9 @@ export default function LeagueMembers() {
       // Reload data for at sikre konsistens
       console.log('🔄 Reloading data...');
       await loadData();
+      
+      // Also invalidate my-leagues query so "Your leagues" panel updates
+      queryClient.invalidateQueries({ queryKey: ['my-leagues'] });
       console.log('✅ Data reloaded');
     } catch (error: any) {
       // Rollback optimistisk opdatering ved fejl
