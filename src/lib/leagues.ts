@@ -1,48 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Helper function to ensure user has a profile
+ * Helper function to ensure user has a profile and return user ID
  */
 async function ensureUserProfile() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!user) throw new Error('Not authenticated');
 
-  // Try to get or create the profile
-  let profile = null;
-  const { data: existingProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, user_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  // Handle 406 or other profile errors gracefully
-  if (profileError && profileError.code !== 'PGRST116') {
-    console.warn('Profile lookup error (will create new):', profileError);
-    // Continue to create profile below
-  }
-
-  if (!existingProfile || profileError) {
-    // Create profile if it doesn't exist
-    const { data: newProfile, error: createError } = await supabase
-      .from('profiles')
-      .insert([{
-        id: user.id,  // Use id as primary key
-        user_id: user.id,  // Keep user_id for compatibility
-        username: user.email?.split('@')[0] || 'user',
-        display_name: user.email?.split('@')[0] || 'User',
-      }])
-      .select('id, user_id')
-      .single();
-
-    if (createError) throw createError;
-    profile = newProfile;
-  } else {
-    profile = existingProfile;
-  }
-
-  if (!profile) throw new Error('Could not get or create profile');
-  return profile;
+  // Just return the user ID - profiles should be managed by auth hook
+  return { id: user.id, user_id: user.id };
 }
 
 export interface League {
@@ -59,6 +26,7 @@ export interface League {
   is_admin?: boolean;
   membership_status?: string;
   pending_requests_count?: number;
+  role?: 'owner' | 'admin' | 'member';
 }
 
 export interface LeagueMember {
@@ -103,31 +71,23 @@ export interface PlayerBase {
 }
 
 /**
- * Creates a new league
+ * Creates a new league atomically with owner membership
  */
 export async function createLeague(
   name: string,
   description?: string,
-  isPublic: boolean = false,
-  maxMembers: number = 10
-): Promise<{ success: boolean; league_id?: string; invite_code?: string; error?: string }> {
-  try {
-    // Ensure user has a profile first
-    await ensureUserProfile();
-
-    const { data, error } = await supabase.rpc('create_league', {
-      p_name: name,
-      p_description: description,
-      p_is_public: isPublic,
-      p_max_members: maxMembers
-    });
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating league:', error);
-    return { success: false, error: String(error) };
-  }
+  isPublic: boolean = true,
+  maxMembers: number = 3
+): Promise<League> {
+  const { data, error } = await supabase.rpc('create_league_with_owner', {
+    p_name: name,
+    p_description: description ?? null,
+    p_is_public: isPublic,
+    p_max_members: maxMembers
+  });
+  
+  if (error) throw error;
+  return data; // returns the league row
 }
 
 /**
@@ -180,85 +140,50 @@ export async function manageLeagueMembership(
 }
 
 /**
- * Gets leagues the current user is involved in
+ * Gets leagues the current user is involved in using the optimized RPC
  */
 export async function getUserLeagues(): Promise<League[]> {
   try {
-    const profile = await ensureUserProfile();
-
-    // Get leagues where user is admin
-    const { data: adminLeagues, error: adminError } = await supabase
-      .from('leagues')
-      .select('*')
-      .eq('admin_user_id', profile.id);
-
-    if (adminError) throw adminError;
-
-    // Get league IDs where user is a member (no status filter - league_members doesn't have status column)
-    const { data: membershipData, error: membershipError } = await supabase
-      .from('league_members')
-      .select('league_id, role')
-      .eq('user_id', profile.id);
-
-    if (membershipError) throw membershipError;
-
-    // Get league details for member leagues
-    let memberLeagues = [];
-    if (membershipData && membershipData.length > 0) {
-      const leagueIds = membershipData.map(m => m.league_id);
-      const { data, error } = await supabase
-        .from('leagues')
-        .select('*')
-        .in('id', leagueIds);
-      
-      if (error) throw error;
-      memberLeagues = data || [];
-    }
-
-    // Combine and deduplicate leagues
-    const allLeagues = [...(adminLeagues || []), ...memberLeagues];
-    const uniqueLeagues = allLeagues.filter((league, index, self) => 
-      index === self.findIndex(l => l.id === league.id)
-    );
-
-    // Enhance with additional info
-    const enhancedLeagues: League[] = [];
-    for (const league of uniqueLeagues) {
-      // Count members (remove status filter)
-      const { count: memberCount } = await supabase
-        .from('league_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('league_id', league.id);
-
-      // Check if user is admin based on role in league_members or admin_user_id
-      const userMembership = membershipData?.find(m => m.league_id === league.id);
-      const isAdmin = league.admin_user_id === profile.id || 
-                     (userMembership && ['owner', 'admin'].includes(userMembership.role));
-
-      // Count pending requests for admin leagues
-      let pendingRequestsCount = 0;
-      if (isAdmin) {
-        const { count: pendingCount } = await supabase
-          .from('league_join_requests')
-          .select('*', { count: 'exact', head: true })
-          .eq('league_id', league.id)
-          .eq('status', 'pending');
-        
-        pendingRequestsCount = pendingCount || 0;
-      }
-
-      enhancedLeagues.push({
-        ...league,
-        member_count: memberCount || 0,
-        is_admin: isAdmin,
-        membership_status: 'approved',
-        pending_requests_count: pendingRequestsCount
-      });
-    }
-
-    return enhancedLeagues;
+    const { data, error } = await supabase.rpc('get_user_leagues');
+    
+    if (error) throw error;
+    
+    return (data || []).map(league => ({
+      ...league,
+      member_count: Number(league.member_count),
+      pending_requests_count: Number(league.pending_requests_count)
+    }));
   } catch (error) {
     console.error('Error fetching user leagues:', error);
+    throw error;
+  }
+}
+
+/**
+ * Search leagues in the directory
+ */
+export async function searchLeagues(
+  searchTerm: string = '',
+  publicOnly: boolean = true,
+  hasActiveGame?: boolean,
+  sortBy: 'newest' | 'most_members' | 'alphabetical' = 'newest'
+): Promise<League[]> {
+  try {
+    const { data, error } = await supabase.rpc('search_leagues', {
+      p_search_term: searchTerm,
+      p_public_only: publicOnly,
+      p_has_active_game: hasActiveGame,
+      p_sort_by: sortBy
+    });
+    
+    if (error) throw error;
+    
+    return (data || []).map(league => ({
+      ...league,
+      member_count: Number(league.member_count)
+    }));
+  } catch (error) {
+    console.error('Error searching leagues:', error);
     throw error;
   }
 }

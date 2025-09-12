@@ -46,7 +46,11 @@
       "Bash(move auto_credential_updater.js auto_credential_updater.cjs)",
       "Bash(ren:*)",
       "Bash(psql:*)",
-      "WebFetch(domain:c00ebd80.runaro.pages.dev)"
+      "WebFetch(domain:c00ebd80.runaro.pages.dev)",
+      "Read(//c/tmp/**)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

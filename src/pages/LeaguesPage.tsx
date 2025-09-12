@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -10,20 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Plus, Users, Trophy, Key, Crown, Clock, Play, Bell } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import LeagueDirectory from '@/components/leagues/LeagueDirectory';
+import { createLeague, joinLeague, getUserLeagues, getLeagueGames, createGame, startGame, type League, type Game } from '@/lib/leagues';
 import AdminRequestPanel from '@/components/leagues/AdminRequestPanel';
-import { 
-  League, 
-  Game,
-  getUserLeagues, 
-  createLeague, 
-  joinLeague, 
-  getLeagueGames,
-  createGame,
-  startGame
-} from '@/lib/leagues';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function LeaguesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -36,43 +27,27 @@ export default function LeaguesPage() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [selectedLeagueName, setSelectedLeagueName] = useState<string>('');
   const [games, setGames] = useState<Game[]>([]);
-  const [adminLeagues, setAdminLeagues] = useState<League[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Filter admin leagues based on is_admin property from the RPC
+  const adminLeagues = leagues.filter(league => league.is_admin);
 
   const [newLeague, setNewLeague] = useState({
     name: '',
     description: '',
-    isPublic: false,
-    maxMembers: 10
+    isPublic: true,
+    maxMembers: 3
   });
 
   const [inviteCode, setInviteCode] = useState('');
   const [newGameName, setNewGameName] = useState('');
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  const fetchLeagues = async () => {
+  const fetchLeagues = useCallback(async () => {
     try {
       const userLeagues = await getUserLeagues();
       setLeagues(userLeagues);
-      
-      // Filter admin leagues for request counting
-      const adminLeaguesList = userLeagues.filter(league => league.is_admin);
-      setAdminLeagues(adminLeaguesList);
     } catch (error) {
       console.error('Error fetching leagues:', error);
       toast({
@@ -83,7 +58,9 @@ export default function LeaguesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+
 
   const fetchLeagueGames = async (leagueId: string) => {
     try {
@@ -121,8 +98,27 @@ export default function LeaguesPage() {
   });
 
   useEffect(() => {
-    fetchLeagues();
-  }, []);
+    // Only fetch leagues after authentication is confirmed and user exists
+    if (!authLoading && user) {
+      fetchLeagues();
+    }
+  }, [authLoading, user, fetchLeagues]);
+
+  // Early returns after all hooks are defined
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   const handleCreateLeague = async () => {
     if (!newLeague.name.trim()) {
@@ -135,28 +131,20 @@ export default function LeaguesPage() {
     }
 
     try {
-      const result = await createLeague(
+      const league = await createLeague(
         newLeague.name,
         newLeague.description || undefined,
         newLeague.isPublic,
         newLeague.maxMembers
       );
 
-      if (result.success) {
-        toast({
-          title: "Liga oprettet!",
-          description: `Invitationskode: ${result.invite_code}`,
-        });
-        setCreateDialogOpen(false);
-        setNewLeague({ name: '', description: '', isPublic: false, maxMembers: 10 });
-        fetchLeagues();
-      } else {
-        toast({
-          title: "Fejl ved oprettelse af liga",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Liga oprettet!",
+        description: `Invitationskode: ${league.invite_code}`,
+      });
+      setCreateDialogOpen(false);
+      setNewLeague({ name: '', description: '', isPublic: true, maxMembers: 3 });
+      fetchLeagues();
     } catch (error) {
       toast({
         title: "Fejl ved oprettelse af liga",
@@ -401,10 +389,25 @@ export default function LeaguesPage() {
                       id="maxMembers"
                       type="number"
                       min="2"
-                      max="20"
+                      max="50"
                       value={newLeague.maxMembers}
-                      onChange={(e) => setNewLeague({ ...newLeague, maxMembers: parseInt(e.target.value) || 10 })}
+                      onChange={(e) => setNewLeague({ ...newLeague, maxMembers: parseInt(e.target.value) || 3 })}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Free plan: max 3 members. Pro plan: up to 50 members.
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isPublic"
+                      checked={newLeague.isPublic}
+                      onChange={(e) => setNewLeague({ ...newLeague, isPublic: e.target.checked })}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="isPublic" className="text-sm">
+                      Public league (appears in directory)
+                    </Label>
                   </div>
                 </div>
                 <DialogFooter>
@@ -510,6 +513,13 @@ export default function LeaguesPage() {
                       <span className="font-medium">
                         {league.member_count} / {league.max_members}
                       </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Role</span>
+                      <Badge variant={league.role === 'owner' ? 'default' : 'secondary'}>
+                        {league.role}
+                      </Badge>
                     </div>
                     
                     <div className="flex items-center justify-between text-sm">

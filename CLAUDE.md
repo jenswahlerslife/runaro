@@ -19,6 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:setup` - Initial database setup (login and link project)
 - `npm run db:deploy` - Deploy all pending migrations
 - `npm run db:env` - Load environment variables for database operations
+- `npm run db:login` - Login to Supabase CLI with access token
+- `npm run db:link` - Link local project to Supabase project
 
 **Deployment & Cloudflare:**
 - `npm run deploy` - Full deployment script 
@@ -63,6 +65,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/games/:gameId` - Individual territory game interface
 - `/map` - Main territory visualization
 - `/debug/strava` - Strava integration debugging tools
+- `/subscription` - Subscription management and upgrade interface
+- `/error-dashboard` - Error monitoring and reporting dashboard
 
 ### Authentication System
 - Custom `useAuth` hook with React Context
@@ -83,6 +87,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `league_memberships` - League membership management
 - `player_bases` - Player starting positions in territory games
 - `territory_ownership` - Territory capture and ownership tracking
+- `error_reports` - System error logging and monitoring
+- `subscriptions` - User subscription management and billing
 
 **Key Features:**
 - PostGIS integration for geospatial territory calculations
@@ -121,14 +127,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Critical Files:**
 - `public/_redirects` - Essential for Strava OAuth callbacks on Cloudflare Pages
-- `supabase/migrations/` - Database schema evolution (40+ migration files)
+- `supabase/migrations/` - Database schema evolution (50+ migration files)
 - `supabase/config.toml` - Supabase project configuration with auth settings
 - `src/integrations/supabase/client.ts` - Supabase client configuration
 - `src/integrations/supabase/types.ts` - Auto-generated TypeScript types
 - `src/hooks/useAuth.tsx` - Central authentication logic with profile management
+- `src/hooks/useErrorReporting.tsx` - Error reporting and logging system
+- `src/hooks/useSubscription.tsx` - Subscription management and billing integration
+- `src/hooks/useMyLeagues.ts` - League membership and management utilities
 - `src/types/ui.ts` - UI-safe types that exclude sensitive data like age
 - `src/components/leagues/` - League management UI components
 - `src/lib/leagues.ts` - League business logic and API functions
+- `src/pages/LeaguesPage.tsx` - Main leagues interface with directory and admin features
+- `src/pages/Subscription.tsx` - Subscription management interface
+- `src/pages/ErrorDashboard.tsx` - Error monitoring and analytics dashboard
 
 ## Development Workflow
 
@@ -159,11 +171,18 @@ When working on this codebase:
 - Production URL: `https://ojjpslrhyutizwpvvngu.supabase.co`
 - Client configured in `src/integrations/supabase/client.ts`
 - Auth redirects to `/auth/callback`
+- Edge Functions: Stripe webhooks, customer portal, checkout creation, error reporting
 
 **Strava OAuth:**
 - Callbacks handled at `/auth/strava/callback`  
 - Debug interface at `/debug/strava`
 - Production callbacks require `public/_redirects` file
+
+**Stripe Integration:**
+- Subscription billing and payment processing
+- Customer portal for subscription management
+- Webhook handlers in `supabase/functions/`
+- Integration with Supabase for user subscription tracking
 
 **Cloudflare Pages:**
 - Project name: "runaro"
@@ -184,6 +203,8 @@ When working on this codebase:
 - Join requests flow: User submits → Admin approves → Automatic membership creation
 - AdminRequestPanel component handles pending requests with real-time updates
 - LeagueDirectory provides public league discovery with join functionality
+- League memberships managed through dedicated views and RLS policies
+- Recent fixes ensure proper conflict resolution for membership view operations
 - All league operations secured with user-specific RLS policies
 
 ## Engine Requirements

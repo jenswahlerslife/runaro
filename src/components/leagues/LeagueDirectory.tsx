@@ -65,7 +65,7 @@ const LeagueDirectory: React.FC = () => {
       if (!user) return [];
       
       const { data, error } = await supabase
-        .from('league_join_requests')
+        .from('league_join_requests_view')
         .select('id, league_id, status')
         .eq('user_id', user.id);
       

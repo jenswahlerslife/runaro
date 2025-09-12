@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Home, Map as MapIcon, LogOut, Plus, Users, Activity } from 'lucide-react';
+import { Home, Map as MapIcon, LogOut, Plus, Users, Activity, Crown } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -70,6 +70,15 @@ const Layout = ({ children }: LayoutProps) => {
                   Upload
                 </Button>
               </Link>
+              <Link to="/subscription">
+                <Button 
+                  variant={isActive('/subscription') ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Pro
+                </Button>
+              </Link>
             </nav>
 
             <Button 
@@ -120,6 +129,16 @@ const Layout = ({ children }: LayoutProps) => {
             >
               <Plus className="h-4 w-4" />
               <span className="text-xs mt-1">Upload</span>
+            </Button>
+          </Link>
+          <Link to="/subscription">
+            <Button 
+              variant={isActive('/subscription') ? 'default' : 'ghost'}
+              size="sm"
+              className="flex flex-col items-center h-12"
+            >
+              <Crown className="h-4 w-4" />
+              <span className="text-xs mt-1">Pro</span>
             </Button>
           </Link>
         </div>

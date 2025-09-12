@@ -17,24 +17,41 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 // Simplified helper function to ensure user has a profile
 const ensureProfileExists = async (user: User) => {
   try {
-    // Simple check - don't block loading if profile operations fail
     const username = user.user_metadata?.username || user.email?.split('@')[0] || 'user';
     const displayName = user.user_metadata?.display_name || username;
     const age = user.user_metadata?.age ? Number(user.user_metadata.age) : 25;
 
-    // Try to create profile if it doesn't exist (upsert approach)
-    await supabase
+    // First check if profile exists to avoid unnecessary upserts
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .upsert({
-        id: user.id,  // Use 'id' not 'user_id'
-        user_id: user.id,  // Keep user_id in sync for compatibility
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (existingProfile) {
+      console.log('Profile already exists for user:', user.id);
+      return;
+    }
+
+    // Create profile with proper structure
+    const { error } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,       // Primary key
+        user_id: user.id,  // Foreign key to auth.users
         username,
         display_name: displayName,
         age: age,
-      }, { 
-        onConflict: 'id',  // Use 'id' as conflict target
-        ignoreDuplicates: false 
       });
+
+    if (error) {
+      // If it's a duplicate key error, that's fine - profile already exists
+      if (error.code === '23505') {
+        console.log('Profile already exists (caught duplicate):', user.id);
+        return;
+      }
+      throw error;
+    }
 
     console.log('Profile ensured for user:', user.id);
   } catch (error) {
