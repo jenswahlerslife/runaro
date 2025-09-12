@@ -238,6 +238,7 @@ export default function LeagueMembers() {
   }, [searchTerm, searchUsers]);
 
   const approveRequest = async (request: JoinRequest) => {
+    console.log('🚀 Approve request called for:', request.display_name, request.id);
     setActionLoading(request.id);
     
     // Optimistisk opdatering: fjern request og tilføj medlem med det samme
@@ -249,32 +250,44 @@ export default function LeagueMembers() {
       joined_at: new Date().toISOString()
     };
     
+    console.log('📝 Before update - Requests:', requests.length, 'Members:', members.length);
+    
     // Opdater UI optimistisk
     const originalRequests = [...requests];
     const originalMembers = [...members];
     
-    setRequests(prev => prev.filter(r => r.id !== request.id));
-    setMembers(prev => [...prev, optimisticMember]);
+    const newRequests = requests.filter(r => r.id !== request.id);
+    const newMembers = [...members, optimisticMember];
+    
+    console.log('📝 After filter - New requests:', newRequests.length, 'New members:', newMembers.length);
+    
+    setRequests(newRequests);
+    setMembers(newMembers);
     
     try {
+      console.log('🔄 Calling RPC approve_join_request...');
       const { error } = await supabase.rpc('approve_join_request', {
         request_id: request.id
       });
       
       if (error) {
-        console.error('RPC error:', error);
+        console.error('❌ RPC error:', error);
         throw error;
       }
 
+      console.log('✅ RPC success!');
       toast({
         title: "Anmodning godkendt!",
         description: `${request.display_name} er nu medlem af ligaen`,
       });
 
       // Reload data for at få rigtige IDs og opdateret data
-      loadData();
+      console.log('🔄 Reloading data...');
+      await loadData();
+      console.log('✅ Data reloaded');
     } catch (error: any) {
       // Rollback optimistisk opdatering ved fejl
+      console.log('❌ Rolling back optimistic update');
       setRequests(originalRequests);
       setMembers(originalMembers);
       
@@ -296,31 +309,42 @@ export default function LeagueMembers() {
   };
 
   const rejectRequest = async (request: JoinRequest) => {
+    console.log('🚀 Reject request called for:', request.display_name, request.id);
     setActionLoading(request.id);
+    
+    console.log('📝 Before reject - Requests:', requests.length);
     
     // Optimistisk opdatering: fjern request med det samme
     const originalRequests = [...requests];
-    setRequests(prev => prev.filter(r => r.id !== request.id));
+    const newRequests = requests.filter(r => r.id !== request.id);
+    
+    console.log('📝 After filter - New requests:', newRequests.length);
+    setRequests(newRequests);
     
     try {
+      console.log('🔄 Calling RPC decline_join_request...');
       const { error } = await supabase.rpc('decline_join_request', {
         request_id: request.id
       });
       
       if (error) {
-        console.error('RPC error:', error);
+        console.error('❌ RPC error:', error);
         throw error;
       }
 
+      console.log('✅ RPC success!');
       toast({
         title: "Anmodning afvist",
         description: `Anmodning fra ${request.display_name} er afvist`,
       });
 
       // Reload data for at sikre konsistens
-      loadData();
+      console.log('🔄 Reloading data...');
+      await loadData();
+      console.log('✅ Data reloaded');
     } catch (error: any) {
       // Rollback optimistisk opdatering ved fejl
+      console.log('❌ Rolling back optimistic update');
       setRequests(originalRequests);
       
       console.error('Error rejecting request:', {
@@ -619,6 +643,7 @@ export default function LeagueMembers() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
+                          type="button"
                           size="sm"
                           onClick={() => approveRequest(request)}
                           disabled={actionLoading === request.id}
@@ -627,6 +652,7 @@ export default function LeagueMembers() {
                           Accepter
                         </Button>
                         <Button
+                          type="button"
                           size="sm"
                           variant="destructive"
                           onClick={() => rejectRequest(request)}
@@ -671,6 +697,8 @@ export default function LeagueMembers() {
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
+                      id="memberSearch"
+                      name="memberSearch"
                       placeholder="Søg brugere efter navn eller brugernavn..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
