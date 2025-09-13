@@ -1,205 +1,103 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import Layout from '@/components/Layout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Target, Crown, Users, Clock, Map, Activity, Calendar, Gauge, Play } from 'lucide-react';
-import { 
-  Game,
-  PlayerBase,
-  getGamePlayerBases,
-  setPlayerBase,
-  getUserActivitiesForBase,
-  startGame
-} from '@/lib/leagues';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { rpcGetGameOverview, rpcGetPlayerStats } from "@/lib/gamesApi";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Trophy, Clock, Users, Target, Activity, Map } from "lucide-react";
+import { Link } from "react-router-dom";
 
-interface GameWithLeague extends Game {
-  league?: {
-    name: string;
-    admin_user_id: string;
-  };
-}
-
-interface ActivityForBase {
-  id: string;
-  name: string;
-  distance: number;
-  moving_time: number;
-  activity_type: string;
-  start_date: string;
-  strava_activity_id: number;
-}
-
-export default function GamePage() {
-  const { gameId } = useParams<{ gameId: string }>();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const [game, setGame] = useState<GameWithLeague | null>(null);
-  const [playerBases, setPlayerBases] = useState<PlayerBase[]>([]);
-  const [userActivities, setUserActivities] = useState<ActivityForBase[]>([]);
+function useGameOverview(gameId: string) {
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [settingBase, setSettingBase] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<string>('');
-  const [currentUserProfile, setCurrentUserProfile] = useState<string>('');
+  const [err, setErr] = useState<any>(null);
 
-  const fetchGameData = async () => {
-    if (!gameId) return;
-
+  async function load() {
+    setLoading(true);
     try {
-      // Fetch game with league info
-      const { data: gameData, error: gameError } = await supabase
-        .from('games')
-        .select(`
-          *,
-          leagues!games_league_id_fkey(name, admin_user_id)
-        `)
-        .eq('id', gameId)
-        .single();
-
-      if (gameError) throw gameError;
-
-      const gameWithLeague: GameWithLeague = {
-        ...gameData,
-        league: gameData.leagues
-      };
-
-      setGame(gameWithLeague);
-
-      // Get current user profile ID
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (profile) {
-        setCurrentUserProfile(profile.id);
-      }
-
-      // Fetch player bases
-      const bases = await getGamePlayerBases(gameId);
-      setPlayerBases(bases);
-
-      // If game is in setup and user hasn't set base yet, fetch user activities
-      if (gameData.status === 'setup') {
-        const userBase = bases.find(base => base.user_id === profile?.id);
-        if (!userBase) {
-          const activities = await getUserActivitiesForBase();
-          setUserActivities(activities);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching game data:', error);
-      toast({
-        title: "Error loading game",
-        description: String(error),
-        variant: "destructive",
-      });
+      const d = await rpcGetGameOverview(gameId);
+      setData(d);
+      setErr(null);
+    } catch (e) {
+      setErr(e);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    if (user && gameId) {
-      fetchGameData();
-    }
-  }, [user, gameId]);
+    load();
+    // realtime: lyt på games og player_bases
+    const ch1 = supabase
+      .channel(`games_${gameId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}`}, load)
+      .subscribe();
+    const ch2 = supabase
+      .channel(`player_bases_${gameId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'player_bases', filter: `game_id=eq.${gameId}`}, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
+  }, [gameId]);
 
-  const handleSetBase = async () => {
-    if (!selectedActivity || !gameId) return;
+  return { data, loading, err, reload: load };
+}
 
-    setSettingBase(true);
-    try {
-      const result = await setPlayerBase(gameId, selectedActivity);
-
-      if (result.success) {
-        toast({
-          title: "Base set successfully!",
-          description: `${result.activity_name} is now your base`,
-        });
-        await fetchGameData(); // Refresh data
-      } else {
-        toast({
-          title: "Error setting base",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error setting base",
-        description: String(error),
-        variant: "destructive",
-      });
-    } finally {
-      setSettingBase(false);
-    }
-  };
-
-  const handleStartGameClick = async () => {
-    if (!gameId) return;
-
-    try {
-      const result = await startGame(gameId);
-
-      if (result.success) {
-        toast({
-          title: "Game started! 🎮",
-          description: `30-day territorial competition with ${result.base_count} players begins now!`,
-        });
-        await fetchGameData(); // Refresh data
-      } else {
-        toast({
-          title: "Error starting game",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error starting game",
-        description: String(error),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatDistance = (distance: number | null): string => {
-    if (!distance || distance <= 0) return "0.00 km";
-    const km = distance > 1000 ? distance / 1000 : distance;
-    return `${km.toFixed(2)} km`;
-  };
-
-  const formatTime = (seconds: number | null): string => {
-    if (!seconds) return "0m";
-    const s = Math.max(0, seconds);
-    const h = Math.floor(s / 3600);
+function useCountdown(endIso?: string | null) {
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    if (!endIso) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [endIso]);
+  return useMemo(() => {
+    if (!endIso) return null;
+    const remainingMs = new Date(endIso).getTime() - now;
+    const clamped = Math.max(0, remainingMs);
+    const s = Math.floor(clamped / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
+    const sec = s % 60;
+    return { d, h, m, s: sec, ms: clamped, isOver: remainingMs <= 0 };
+  }, [endIso, now]);
+}
+
+export default function GamePage() {
+  const { id: gameId } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { data, loading, err } = useGameOverview(gameId!);
+  const countdown = useCountdown(data?.meta?.end_date);
+
+  const status = data?.meta?.status;
+  const needBases = status === "setup";
+  const finished = status === "finished";
+
+  const [stats, setStats] = useState<{ total_distance_km: number; total_moving_time_s: number }>({ total_distance_km: 0, total_moving_time_s: 0 });
+
+  useEffect(() => {
+    if (!gameId || !user?.id) return;
+    rpcGetPlayerStats(gameId, user.id).then(setStats).catch(() => {});
+  }, [gameId, user?.id, data?.meta?.end_date, data?.meta?.start_date]);
+
+  const getStatusBadge = (status: string) => {
+    const statusMap = {
+      setup: { label: 'Opsætning', variant: 'secondary' as const, color: 'text-blue-600' },
+      active: { label: 'Aktiv', variant: 'default' as const, color: 'text-green-600' },
+      finished: { label: 'Afsluttet', variant: 'outline' as const, color: 'text-gray-600' },
+      cancelled: { label: 'Annulleret', variant: 'destructive' as const, color: 'text-red-600' },
+    };
+    return statusMap[status as keyof typeof statusMap] || statusMap.setup;
   };
 
-  const formatDate = (dateStr: string): string => {
-    return new Date(dateStr).toLocaleDateString('da-DK', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const getCurrentUserBase = () => {
-    return playerBases.find(base => base.user_id === currentUserProfile);
-  };
-
-  const isGameAdmin = () => {
-    return game?.league?.admin_user_id === currentUserProfile;
+  const formatTimeHours = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}t ${minutes}m`;
   };
 
   if (loading) {
@@ -207,28 +105,30 @@ export default function GamePage() {
       <Layout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Play className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Loading game...</p>
+            <Trophy className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Henter spil...</p>
           </div>
         </div>
       </Layout>
     );
   }
 
-  if (!game) {
+  if (err) {
     return (
       <Layout>
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Game not found</h2>
+          <h2 className="text-2xl font-bold mb-4">Fejl ved indlæsning</h2>
+          <p className="text-muted-foreground mb-4">{String(err.message || err)}</p>
           <Button onClick={() => navigate('/leagues')}>
-            Back to Leagues
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Tilbage til Ligaer
           </Button>
         </div>
       </Layout>
     );
   }
 
-  const currentUserBase = getCurrentUserBase();
+  const statusConfig = getStatusBadge(status);
 
   return (
     <Layout>
@@ -239,215 +139,180 @@ export default function GamePage() {
             <Link to="/leagues">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Leagues
+                Tilbage til Ligaer
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Play className="h-8 w-8 text-primary" />
-                {game.name}
+                <Trophy className="h-8 w-8 text-primary" />
+                Spil
               </h1>
               <p className="text-muted-foreground">
-                {game.league?.name} • {playerBases.length} players
+                {data?.counts.member_count} spillere deltager
               </p>
             </div>
           </div>
-          <Badge variant={
-            game.status === 'active' ? 'default' :
-            game.status === 'setup' ? 'secondary' : 'outline'
-          } className="text-sm">
-            {game.status}
+          <Badge variant={statusConfig.variant} className="text-sm">
+            {statusConfig.label}
           </Badge>
         </div>
 
-        {/* Game Status */}
-        {game.status === 'active' && (
+        {/* Status Cards */}
+        {needBases && (
+          <Alert>
+            <Target className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Venter på baser: {data.counts.base_count}/{data.counts.member_count}</strong>
+              <br />
+              Nedtællingen starter automatisk, når alle spillere har uploadet en Base.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {status === "active" && countdown && (
           <Card className="border-green-200 bg-green-50">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-4">
-                <Clock className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-800">Game Active</p>
-                  <p className="text-sm text-green-600">
-                    Ends: {new Date(game.end_date!).toLocaleDateString()}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-xs text-green-700 mb-1">Time remaining</div>
+                  <div className="text-2xl font-bold text-green-800 tabular-nums">
+                    {countdown.d}d {countdown.h}t {countdown.m}m {countdown.s}s
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-green-700 mb-1">Total distance</div>
+                  <div className="text-2xl font-bold text-green-800">{stats.total_distance_km.toFixed(2)} km</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-green-700 mb-1">Time spent</div>
+                  <div className="text-2xl font-bold text-green-800">
+                    {formatTimeHours(stats.total_moving_time_s)}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {game.status === 'setup' && (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-4">
-                <Target className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-blue-800">Setup Phase</p>
-                  <p className="text-sm text-blue-600">
-                    Players need to set their bases before the game can start
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {finished && (
+          <Alert>
+            <Trophy className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Spillet er afsluttet!</strong>
+              {data.meta.winner_user_id ? (
+                <> Vinder: <span className="font-semibold">{data.meta.winner_user_id}</span></>
+              ) : (
+                " Vinder afventer serverberegning."
+              )}
+            </AlertDescription>
+          </Alert>
         )}
 
-        {/* Player Bases */}
+        {/* Stats Grid - kun vis hvis aktiv eller afsluttet */}
+        {(status === "active" || finished) && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Varighed</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{data.meta.duration_days || 14} dage</div>
+                <p className="text-xs text-muted-foreground">
+                  Spil længde
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Deltagere</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{data.counts.member_count}</div>
+                <p className="text-xs text-muted-foreground">
+                  Spillere i spillet
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Min Distance</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total_distance_km.toFixed(1)} km</div>
+                <p className="text-xs text-muted-foreground">
+                  Total løbet
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Leaderboard */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Player Bases
+              <Trophy className="h-5 w-5" />
+              Leaderboard (størst areal)
             </CardTitle>
             <CardDescription>
-              Each player's starting territory base
+              Rangering baseret på erobret territory
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {playerBases.map((base) => (
-                <div key={base.id} className="flex items-center justify-between p-3 border rounded-lg">
+              {data.leaderboard.map((row: any, i: number) => (
+                <div key={row.user_id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Target className="h-5 w-5 text-primary" />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                      i === 0 ? 'bg-yellow-100 text-yellow-800' :
+                      i === 1 ? 'bg-gray-100 text-gray-800' :
+                      i === 2 ? 'bg-orange-100 text-orange-800' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {i + 1}
+                    </div>
                     <div>
-                      <p className="font-medium">{base.activity_name || 'Unnamed Activity'}</p>
-                      <p className="text-sm text-muted-foreground">{base.user_email}</p>
+                      <p className="font-medium font-mono text-sm">{row.user_id}</p>
+                      {i === 0 && finished && (
+                        <Badge variant="default" className="text-xs mt-1">
+                          <Trophy className="h-3 w-3 mr-1" />
+                          Vinder
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium">{formatDate(base.base_date)}</p>
-                    {base.territory_size_km2 > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {base.territory_size_km2.toFixed(2)} km² territory
-                      </p>
-                    )}
+                    <p className="font-bold">{row.area_km2.toFixed(2)} km²</p>
+                    <p className="text-xs text-muted-foreground">Territory</p>
                   </div>
                 </div>
               ))}
-              {playerBases.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">
-                  No bases set yet
-                </p>
+              {data.leaderboard.length === 0 && (
+                <div className="text-center py-8">
+                  <Map className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-2">Ingen territory-data endnu</p>
+                  <p className="text-sm text-muted-foreground">
+                    Territory data vil vises når spillere begynder at løbe
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Base Selection (only in setup phase) */}
-        {game.status === 'setup' && !currentUserBase && (
-          <Card>
+        {/* Debug Info - kun i development */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="border-yellow-200 bg-yellow-50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Select Your Base
-              </CardTitle>
-              <CardDescription>
-                Choose an activity as your territorial base. Only activities after this date will count in the game.
-              </CardDescription>
+              <CardTitle className="text-sm text-yellow-800">Debug Info</CardTitle>
             </CardHeader>
-            <CardContent>
-              {userActivities.length === 0 ? (
-                <div className="text-center py-6">
-                  <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">No activities found</p>
-                  <p className="text-sm text-muted-foreground">
-                    Import activities from Strava to set your base
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-3 max-h-96 overflow-y-auto">
-                    {userActivities.map((activity) => (
-                      <div 
-                        key={activity.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                          selectedActivity === activity.id 
-                            ? 'border-primary bg-primary/5' 
-                            : 'hover:bg-muted/50'
-                        }`}
-                        onClick={() => setSelectedActivity(activity.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-4 h-4 rounded-full border-2 ${
-                              selectedActivity === activity.id
-                                ? 'border-primary bg-primary'
-                                : 'border-muted-foreground'
-                            }`} />
-                            <div>
-                              <p className="font-medium">{activity.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {activity.activity_type} • {formatDate(activity.start_date)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right text-sm">
-                            <p>{formatDistance(activity.distance)}</p>
-                            <p className="text-muted-foreground">{formatTime(activity.moving_time)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button 
-                    onClick={handleSetBase}
-                    disabled={!selectedActivity || settingBase}
-                    className="w-full"
-                  >
-                    {settingBase ? 'Setting Base...' : 'Set as Base'}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Current User Base (if set) */}
-        {currentUserBase && (
-          <Card className="border-green-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-800">
-                <Target className="h-5 w-5" />
-                Your Base
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{currentUserBase.activity_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Set on {formatDate(currentUserBase.base_date)}
-                  </p>
-                </div>
-                {currentUserBase.territory_size_km2 > 0 && (
-                  <div className="text-right">
-                    <p className="font-medium">{currentUserBase.territory_size_km2.toFixed(2)} km²</p>
-                    <p className="text-sm text-muted-foreground">Territory size</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Admin Controls */}
-        {isGameAdmin() && game.status === 'setup' && playerBases.length >= 2 && (
-          <Card className="border-blue-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="h-5 w-5" />
-                Game Administration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {playerBases.length} players have set their bases. Ready to start the 30-day competition?
-              </p>
-              <Button onClick={handleStartGameClick}>
-                <Play className="h-4 w-4 mr-2" />
-                Start Game
-              </Button>
+            <CardContent className="text-sm text-yellow-700">
+              <pre>{JSON.stringify(data, null, 2)}</pre>
             </CardContent>
           </Card>
         )}

@@ -59,7 +59,7 @@ const Dashboard = () => {
     try {
       // Load user's leagues
       const { data: memberships, error: membershipError } = await supabase
-        .from('league_memberships')
+        .from('league_members')
         .select('league_id')
         .eq('user_id', user?.id);
 

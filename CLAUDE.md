@@ -146,7 +146,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 When working on this codebase:
 
-1. **Run development server:** `npm run dev` (starts on localhost:8080)
+1. **Run development server:** `npm run dev` (starts on port 8080)
 2. **For database changes:** Use `npm run db:new` to create migration, then `npm run db:push` to deploy
 3. **For Strava testing:** Use `/debug/strava` page for OAuth flow testing
 4. **For deployment:** Use `npm run deploy:quick` for fastest deployment to Cloudflare

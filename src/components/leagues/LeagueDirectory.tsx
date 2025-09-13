@@ -64,13 +64,23 @@ const LeagueDirectory: React.FC = () => {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('league_join_requests_view')
-        .select('id, league_id, status')
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      return data as JoinRequest[];
+      // Non-blocking query: default to empty array if it fails
+      try {
+        const { data, error } = await supabase
+          .from('league_join_requests')
+          .select('id, league_id, status')
+          .eq('user_id', user.id)
+          .eq('status', 'pending');
+        
+        if (error) {
+          console.warn('Failed to load join requests:', error);
+          return [];
+        }
+        return data as JoinRequest[];
+      } catch (error) {
+        console.warn('Failed to load join requests:', error);
+        return [];
+      }
     },
     enabled: !!user,
   });
@@ -81,13 +91,22 @@ const LeagueDirectory: React.FC = () => {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('league_memberships')
-        .select('league_id, role')
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      return data as Membership[];
+      // Non-blocking query: default to empty array if it fails
+      try {
+        const { data, error } = await supabase
+          .from('league_members')
+          .select('league_id, role')
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.warn('Failed to load memberships:', error);
+          return [];
+        }
+        return data as Membership[];
+      } catch (error) {
+        console.warn('Failed to load memberships:', error);
+        return [];
+      }
     },
     enabled: !!user,
   });

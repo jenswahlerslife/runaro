@@ -15,6 +15,7 @@ import Layout from '@/components/Layout';
 import LeagueDirectory from '@/components/leagues/LeagueDirectory';
 import AdminRequestBar from '@/components/leagues/AdminRequestBar';
 import AdminRequestPanel from '@/components/leagues/AdminRequestPanel';
+import GameManagement from '@/components/leagues/GameManagement';
 
 interface League {
   id: string;
@@ -23,6 +24,12 @@ interface League {
   invite_code: string;
   creator_id: string;
   created_at: string;
+  admin_user_id?: string;
+}
+
+interface LeagueMembership {
+  league_id: string;
+  role: string;
 }
 
 const Leagues = () => {
@@ -38,6 +45,7 @@ const Leagues = () => {
   const [error, setError] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [memberships, setMemberships] = useState<LeagueMembership[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -62,15 +70,16 @@ const Leagues = () => {
       }
 
       // Get leagues where user is a member
-      const { data: memberships, error: membershipError } = await supabase
-        .from('league_memberships')
-        .select('league_id')
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('league_members')
+        .select('league_id, role')
         .eq('user_id', profile.id);
 
       if (membershipError) throw membershipError;
 
-      if (memberships && memberships.length > 0) {
-        const leagueIds = memberships.map(m => m.league_id);
+      if (membershipData && membershipData.length > 0) {
+        setMemberships(membershipData);
+        const leagueIds = membershipData.map(m => m.league_id);
         
         const { data: leaguesData, error: leaguesError } = await supabase
           .from('leagues')
@@ -82,6 +91,7 @@ const Leagues = () => {
         setLeagues(leaguesData || []);
       } else {
         setLeagues([]);
+        setMemberships([]);
       }
     } catch (error) {
       console.error('Error loading leagues:', error);
@@ -130,10 +140,12 @@ const Leagues = () => {
 
       // Add creator as member
       const { error: membershipError } = await supabase
-        .from('league_memberships')
+        .from('league_members')
         .insert({
           league_id: league.id,
           user_id: profile.id, // Use profile.id instead of user?.id
+          role: 'owner',
+          status: 'approved' // Owners are auto-approved
         });
 
       if (membershipError) throw membershipError;
@@ -184,7 +196,7 @@ const Leagues = () => {
 
       // Check if already a member
       const { data: existingMembership } = await supabase
-        .from('league_memberships')
+        .from('league_members')
         .select('id')
         .eq('league_id', league.id)
         .eq('user_id', profile.id)
@@ -197,10 +209,12 @@ const Leagues = () => {
 
       // Join league
       const { error: membershipError } = await supabase
-        .from('league_memberships')
+        .from('league_members')
         .insert({
           league_id: league.id,
           user_id: profile.id,
+          role: 'member',
+          status: 'pending' // New members need approval
         });
 
       if (membershipError) throw membershipError;
@@ -213,6 +227,11 @@ const Leagues = () => {
       console.error('Error joining league:', error);
       setError(error.message || 'Failed to join league');
     }
+  };
+
+  const isLeagueAdmin = (leagueId: string) => {
+    const membership = memberships.find(m => m.league_id === leagueId);
+    return membership?.role === 'admin' || membership?.role === 'owner';
   };
 
   const copyInviteCode = async (code: string) => {
@@ -468,6 +487,16 @@ const Leagues = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+
+          {/* Game Management for each league */}
+          {selectedLeague && (
+            <div className="mt-8">
+              <GameManagement 
+                leagueId={selectedLeague} 
+                isAdmin={isLeagueAdmin(selectedLeague)} 
+              />
             </div>
           )}
         </div>

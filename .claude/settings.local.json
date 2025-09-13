@@ -51,7 +51,8 @@
       "Bash(tree:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
-      "WebFetch(domain:f39ba855.runaro.pages.dev)"
+      "WebFetch(domain:f39ba855.runaro.pages.dev)",
+      "WebFetch(domain:e32b6c4c.runaro.pages.dev)"
     ],
     "deny": [],
     "ask": []

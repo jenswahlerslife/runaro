@@ -107,6 +107,9 @@ BEGIN
     created_at = now()
   RETURNING * INTO base_record;
 
+  -- Auto-aktiver spillet, hvis dette var den sidste manglende base
+  PERFORM public.maybe_activate_game(p_game_id);
+
   RETURN json_build_object(
     'success', true,
     'activity_name', activity_record.name,

@@ -19,12 +19,12 @@ const AdminRequestBar: React.FC<AdminRequestBarProps> = ({ onOpenRequestPanel })
     queryFn: async () => {
       if (!user) return { isAdmin: false, pendingCount: 0 };
 
-      // Check if user is admin of any league
+      // Check if user is admin or owner of any league
       const { data: adminMemberships, error: membershipError } = await supabase
-        .from('league_memberships')
+        .from('league_members')
         .select('league_id')
         .eq('user_id', user.id)
-        .eq('role', 'admin');
+        .in('role', ['admin', 'owner']);
 
       if (membershipError) throw membershipError;
 

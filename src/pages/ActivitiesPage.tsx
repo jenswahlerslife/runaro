@@ -1,14 +1,16 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Activity, ArrowLeft, Map, Calendar, Clock, Gauge, Target, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { setActivityAsBase, recalculateTerritory, getUserActivitiesWithTerritory } from "@/lib/territory";
+import { setPlayerBase } from "@/lib/gamesApi";
 
 type ActivityRow = {
   id: string;
@@ -64,10 +66,14 @@ function formatDate(dateStr: string): string {
 
 export default function ActivitiesPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const gameId = searchParams.get("game");
+  const selectBase = searchParams.get("selectBase") === "1";
   const [rows, setRows] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [settingBase, setSettingBase] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [settingGameBase, setSettingGameBase] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -143,7 +149,7 @@ export default function ActivitiesPage() {
           title: "Base set successfully",
           description: `Territory includes ${result.territory_count} of ${result.total_count} activities`,
         });
-        await fetchData(); // Refresh the data
+        await refetchData(); // Refresh the data
       } else {
         toast({
           title: "Error setting base",
@@ -162,6 +168,64 @@ export default function ActivitiesPage() {
     }
   };
 
+  const refetchData = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const activities = await getUserActivitiesWithTerritory();
+      setRows(
+        activities.map((d: any) => ({
+          id: d.id,
+          name: d.name ?? "Untitled activity",
+          distance: typeof d.distance === "number" ? d.distance : (d.distance ?? 0),
+          moving_time: d.moving_time ?? 0,
+          activity_type: d.activity_type ?? "Run",
+          start_date: d.start_date,
+          strava_activity_id: d.strava_activity_id,
+          is_base: d.is_base ?? false,
+          included_in_game: d.included_in_game ?? true,
+          route: d.route,
+        }))
+      );
+    } catch (error) {
+      console.error("[Activities] Database error:", error);
+      setRows([]);
+    }
+    setLoading(false);
+  };
+
+  const handleSetGameBase = async (activityId: string) => {
+    if (!gameId) return;
+    
+    setSettingGameBase(activityId);
+    try {
+      const result = await setPlayerBase(gameId, activityId);
+      if (result.success) {
+        toast({
+          title: "Base sat til spil!",
+          description: "Spillet starter automatisk når alle spillere har sat deres Base.",
+        });
+        // Optionally redirect back or show success state
+      } else {
+        toast({
+          title: "Fejl ved sætning af base",
+          description: result.error || "Ukendt fejl",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: "Fejl ved sætning af base",
+        description: error.message || "Ukendt fejl",
+        variant: "destructive",
+      });
+    } finally {
+      setSettingGameBase(null);
+    }
+  };
+
   const handleRecalculateTerritory = async () => {
     setRecalculating(true);
     try {
@@ -171,7 +235,7 @@ export default function ActivitiesPage() {
           title: "Territory recalculated",
           description: `Territory includes ${result.territory_count} of ${result.total_count} activities`,
         });
-        await fetchData(); // Refresh the data
+        await refetchData(); // Refresh the data
       } else {
         toast({
           title: "Error recalculating territory",
@@ -206,45 +270,61 @@ export default function ActivitiesPage() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Game Base Selection Banner */}
+        {gameId && selectBase && (
+          <Alert>
+            <Target className="h-4 w-4" />
+            <AlertDescription>
+              Du er ved at vælge din <b>Base</b> til dette spil. Vælg en aktivitet som definerer dit startområde.
+              Spillet starter automatisk, når alle spillets spillere har sat deres Base.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/dashboard">
+            <Link to={gameId ? "/leagues" : "/dashboard"}>
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                {gameId ? "Tilbage til Ligaer" : "Back to Dashboard"}
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <Activity className="h-8 w-8 text-primary" />
-                My Activities
+                {gameId && selectBase ? "Vælg Spil Base" : "My Activities"}
               </h1>
               <p className="text-muted-foreground">
-                Manage your territory base and game activities
+                {gameId && selectBase 
+                  ? "Vælg din startbase til spillet" 
+                  : "Manage your territory base and game activities"
+                }
               </p>
-              {baseActivity && (
+              {baseActivity && !gameId && (
                 <p className="text-sm text-muted-foreground mt-1">
                   Base: <span className="font-medium">{baseActivity.name}</span>
                 </p>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleRecalculateTerritory}
-              disabled={recalculating || !baseActivity}
-              variant="outline"
-              size="sm"
-            >
-              {recalculating ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Recalculate Territory
-            </Button>
-          </div>
+          {!gameId && (
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleRecalculateTerritory}
+                disabled={recalculating || !baseActivity}
+                variant="outline"
+                size="sm"
+              >
+                {recalculating ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Recalculate Territory
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Summary Stats */}
@@ -422,25 +502,45 @@ export default function ActivitiesPage() {
                         </td>
                         <td className="py-3 px-2">
                           <div className="flex gap-1">
-                            {!row.is_base && (
+                            {gameId && selectBase ? (
                               <Button 
-                                variant="outline" 
+                                variant="default" 
                                 size="sm"
-                                onClick={() => handleSetBase(row.id)}
-                                disabled={settingBase === row.id}
+                                onClick={() => handleSetGameBase(row.id)}
+                                disabled={settingGameBase === row.id}
                               >
-                                {settingBase === row.id ? (
+                                {settingGameBase === row.id ? (
                                   <RefreshCw className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <Target className="h-4 w-4" />
+                                  <>
+                                    <Target className="h-4 w-4 mr-1" />
+                                    Sæt som Base
+                                  </>
                                 )}
                               </Button>
+                            ) : (
+                              <>
+                                {!row.is_base && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleSetBase(row.id)}
+                                    disabled={settingBase === row.id}
+                                  >
+                                    {settingBase === row.id ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Target className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                                <Link to={`/map?aid=${row.strava_activity_id}`}>
+                                  <Button variant="outline" size="sm">
+                                    <Map className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </>
                             )}
-                            <Link to={`/map?aid=${row.strava_activity_id}`}>
-                              <Button variant="outline" size="sm">
-                                <Map className="h-4 w-4" />
-                              </Button>
-                            </Link>
                           </div>
                         </td>
                       </tr>
