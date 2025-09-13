@@ -233,9 +233,14 @@ export async function createGame(
 
     if (error) throw error;
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating game:', error);
-    return { success: false, error: String(error) };
+    const msg = 
+      error?.message || 
+      error?.hint || 
+      error?.details || 
+      (typeof error === 'string' ? error : JSON.stringify(error));
+    return { success: false, error: msg };
   }
 }
 
