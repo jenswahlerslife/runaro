@@ -117,7 +117,7 @@ BEGIN
   END IF;
 
   -- Subscription gating
-  SELECT CASE WHEN s.is_active AND s.plan IN ('pro','enterprise') THEN 'pro' ELSE 'free' END
+  SELECT CASE WHEN s.subscribed AND s.subscription_tier IN ('pro','enterprise') THEN 'pro' ELSE 'free' END
     INTO v_plan
   FROM public.subscribers s
   WHERE s.user_id = v_uid
