@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,9 @@ interface Game {
 interface GameManagementProps {
   leagueId: string;
   isAdmin: boolean;
+  autoOpenCreate?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function DurationSelector({
@@ -36,27 +39,42 @@ function DurationSelector({
   onChange,
   isPro,
 }: { value: number; onChange: (v: number) => void; isPro: boolean }) {
-  const maxDays = isPro ? 30 : 14;
-  const options = Array.from({ length: maxDays - 13 }, (_, i) => 14 + i); // 14..30 / 14..14
-  
+  if (!isPro) {
+    // Free plan: fixed 14 days (no editing UI, just show "14 days (Free)")
+    return (
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Tidshorisont (dage)</Label>
+        <div className="p-3 border rounded-md bg-muted">
+          <span className="font-medium">14 dage (Gratis)</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Gratis plan bruger en fast 14-dages horisont.
+        </p>
+      </div>
+    );
+  }
+
+  // Pro plan: any integer 14–30 days (inclusive). Default 14.
+  const minDays = 14;
+  const maxDays = 30;
+  const options = Array.from({ length: maxDays - minDays + 1 }, (_, i) => minDays + i);
+
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">Tidshorisont (dage)</Label>
       <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Vælg dage" />
+          <SelectValue placeholder="Vælg mellem 14 og 30 dage" />
         </SelectTrigger>
         <SelectContent>
           {options.map((d) => (
-            <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+            <SelectItem key={d} value={String(d)}>{d} dage</SelectItem>
           ))}
         </SelectContent>
       </Select>
-      {!isPro && (
-        <p className="text-xs text-muted-foreground">
-          Gratis konto: maks 14 dage. Opgradér til Pro for op til 30.
-        </p>
-      )}
+      <p className="text-xs text-muted-foreground">
+        Vælg mellem 14 og 30 dage.
+      </p>
     </div>
   );
 }
@@ -64,15 +82,59 @@ function DurationSelector({
 function StartGameCta({ gameId, gameStatus }: { gameId: string; gameStatus: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [checkingStrava, setCheckingStrava] = useState(false);
+  const [hasStravaConnection, setHasStravaConnection] = useState<boolean | null>(null);
 
-  function handleStartGame() {
-    // Check if user has Strava connected (assuming profile has strava_connected field)
-    // For now, navigate directly to activities with game param
-    const returnTo = `/activities?game=${gameId}&selectBase=1`;
-    navigate(returnTo);
-  }
+  useEffect(() => {
+    checkStravaConnection();
+  }, [user]);
+
+  const checkStravaConnection = async () => {
+    if (!user) return;
+
+    try {
+      setCheckingStrava(true);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('strava_access_token')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const connected = !!profile?.strava_access_token;
+      setHasStravaConnection(connected);
+    } catch (error) {
+      console.error('Error checking Strava connection:', error);
+      setHasStravaConnection(false);
+    } finally {
+      setCheckingStrava(false);
+    }
+  };
+
+  const handleStartGame = () => {
+    if (hasStravaConnection === null || checkingStrava) return; // Still checking
+
+    if (!hasStravaConnection) {
+      // User needs to connect Strava first - redirect to Strava connect then back to game setup
+      navigate(`/strava/connect?return=${encodeURIComponent(`/activities?game=${gameId}&selectBase=1`)}`);
+      return;
+    }
+
+    // User has Strava connected - go directly to game setup for base selection
+    navigate(`/activities?game=${gameId}&selectBase=1`);
+  };
 
   if (gameStatus !== 'setup') return null;
+
+  if (checkingStrava) {
+    return (
+      <Button variant="default" size="sm" disabled>
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+        Tjekker...
+      </Button>
+    );
+  }
 
   return (
     <Button onClick={handleStartGame} variant="default" size="sm">
@@ -82,20 +144,27 @@ function StartGameCta({ gameId, gameStatus }: { gameId: string; gameStatus: stri
   );
 }
 
-export default function GameManagement({ leagueId, isAdmin }: GameManagementProps) {
-  const { isPro } = useSubscription();
+export default function GameManagement({ leagueId, isAdmin, autoOpenCreate, open, onOpenChange }: GameManagementProps) {
+  const { isPro, canCreateGame } = useSubscription();
   const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [internalCreateDialogOpen, setInternalCreateDialogOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const isDialogOpen = isControlled ? Boolean(open) : internalCreateDialogOpen;
+  const setDialogOpen = useCallback(
+    (value: boolean) => {
+      if (!isControlled) {
+        setInternalCreateDialogOpen(value);
+      }
+      onOpenChange?.(value);
+    },
+    [isControlled, onOpenChange]
+  );
   const [newGameName, setNewGameName] = useState('');
   const [durationDays, setDurationDays] = useState(14);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    loadGames();
-  }, [leagueId]);
 
   const loadGames = async () => {
     try {
@@ -115,6 +184,29 @@ export default function GameManagement({ leagueId, isAdmin }: GameManagementProp
     }
   };
 
+  const handleDialogOpenChange = useCallback(
+    (openState: boolean) => {
+      if (openState) {
+        setNewGameName('');
+        setDurationDays(14);
+        setError('');
+      }
+      setDialogOpen(openState);
+    },
+    [setDialogOpen]
+  );
+
+  useEffect(() => {
+    loadGames();
+  }, [leagueId]);
+
+  // Auto-open create dialog if autoOpenCreate prop is true
+  useEffect(() => {
+    if (autoOpenCreate) {
+      handleDialogOpenChange(true);
+    }
+  }, [autoOpenCreate, leagueId, handleDialogOpenChange]);
+
   const handleCreateGame = async () => {
     if (!newGameName.trim()) {
       setError('Spil navn er påkrævet');
@@ -123,27 +215,36 @@ export default function GameManagement({ leagueId, isAdmin }: GameManagementProp
 
     setError('');
     setCreating(true);
-    
+
     try {
-      // 1) Opret game (status='setup')
-      const result = await createGame(leagueId, newGameName);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create game');
+      // Create game with duration_days (plan validation happens server-side)
+      const result = await createGame(leagueId, newGameName, durationDays);
+
+      // Check if result indicates success
+      if (!result.success && result.error) {
+        throw new Error(result.error);
       }
-      
-      const gameId = result.game_id;
 
-      // 2) Sæt varighed + (evtl. auto-aktiver hvis alle har base)
-      await rpcStartGame(gameId, durationDays);
+      const gameId = result.id || result.game_id;
+      if (!gameId) {
+        throw new Error('Game creation succeeded but no game ID returned');
+      }
 
-      toast.success('Spil oprettet!');
-      setCreateDialogOpen(false);
+      toast.success(`Spil oprettet! Varighed: ${result.duration_days} dage. Status: setup.`);
+      setDialogOpen(false);
       setNewGameName('');
       setDurationDays(14);
-      loadGames();
+
+      // Reload games list to show the new game
+      await loadGames();
+
+      // Redirect to game setup for base selection
+    navigate(`/activities?game=${gameId}&selectBase=1`);
     } catch (e: any) {
-      console.error(e);
-      setError(e.message || 'Kunne ikke oprette spil');
+      console.error('Game creation failed:', e);
+      const errorMessage = e.message || 'Kunne ikke oprette spil';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setCreating(false);
     }
@@ -181,67 +282,79 @@ export default function GameManagement({ leagueId, isAdmin }: GameManagementProp
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-            <Trophy className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold">Spil</h3>
-            <p className="text-sm text-muted-foreground">Administrer spil i denne liga</p>
-          </div>
+  const dialogContent = (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Opret Nyt Spil</DialogTitle>
+        <DialogDescription>
+          Opret et nyt spil for ligaen. Spillet starter når alle spillere har sat deres Base.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="game-name">Spil Navn</Label>
+          <Input
+            id="game-name"
+            placeholder="Indtast spil navn"
+            value={newGameName}
+            onChange={(e) => setNewGameName(e.target.value)}
+          />
         </div>
 
-        {isAdmin && (
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Opret Spil
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Opret Nyt Spil</DialogTitle>
-                <DialogDescription>
-                  Opret et nyt spil for ligaen. Spillet starter når alle spillere har sat deres Base.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="game-name">Spil Navn</Label>
-                  <Input
-                    id="game-name"
-                    placeholder="Indtast spil navn"
-                    value={newGameName}
-                    onChange={(e) => setNewGameName(e.target.value)}
-                  />
-                </div>
-                
-                <DurationSelector 
-                  value={durationDays} 
-                  onChange={setDurationDays} 
-                  isPro={isPro} 
-                />
-                
-                {error && (
-                  <Alert>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <Button onClick={handleCreateGame} disabled={creating} className="w-full">
-                  {creating ? "Opretter..." : "Opret Spil"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
+        <DurationSelector
+          value={durationDays}
+          onChange={setDurationDays}
+          isPro={isPro}
+        />
 
-      {games.length === 0 ? (
+        {error && (
+          <Alert>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <Button onClick={handleCreateGame} disabled={creating} className="w-full">
+          {creating ? "Opretter..." : "Opret Spil"}
+        </Button>
+      </div>
+    </DialogContent>
+  );
+
+  return (
+    <div className="space-y-6">
+      {!autoOpenCreate && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary text-primary-foreground">
+              <Trophy className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">Spil</h3>
+              <p className="text-sm text-muted-foreground">Administrer spil i denne liga</p>
+            </div>
+          </div>
+
+          {isAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Opret Spil
+                </Button>
+              </DialogTrigger>
+              {dialogContent}
+            </Dialog>
+          )}
+        </div>
+      )}
+
+      {autoOpenCreate && isAdmin && (
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+          {dialogContent}
+        </Dialog>
+      )}
+
+      {!autoOpenCreate && (games ?? []).length === 0 ? (
         <Card>
           <CardContent className="p-8">
             <div className="text-center space-y-4">
@@ -257,7 +370,7 @@ export default function GameManagement({ leagueId, isAdmin }: GameManagementProp
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : !autoOpenCreate ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {games.map((game) => (
             <Card key={game.id} className="border">
@@ -286,14 +399,21 @@ export default function GameManagement({ leagueId, isAdmin }: GameManagementProp
                 </p>
                 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="flex-1"
-                    onClick={() => navigate(`/games/${game.id}`)}
+                    onClick={() => {
+                      // For setup games, go to GameSetup for base selection
+                      if (game.status === 'setup') {
+        navigate(`/activities?game=${game.id}&selectBase=1`);
+                      } else {
+                        navigate(`/games/${game.id}`);
+                      }
+                    }}
                   >
                     <Trophy className="h-4 w-4 mr-2" />
-                    Se Spil
+                    {game.status === 'setup' ? 'Vælg Base' : 'Se Spil'}
                   </Button>
                   
                   <StartGameCta gameId={game.id} gameStatus={game.status} />
@@ -302,7 +422,7 @@ export default function GameManagement({ leagueId, isAdmin }: GameManagementProp
             </Card>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

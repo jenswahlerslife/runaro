@@ -1,42 +1,89 @@
-# Runaro - Running Game Application
+# 🏃‍♂️ Runaro - Territorielt Løbespil
 
-A gamified running application with Strava integration, built with modern web technologies.
+Et avanceret territorielt spil hvor løbere erobrer geografiske områder gennem deres aktiviteter. Bygget med moderne webteklogier og fokus på sikkerhed og performance.
 
-## 🏃‍♂️ Features
+## ✨ Funktioner
 
-- **Strava Integration**: Connect your Strava account to import running activities
-- **Gamification**: Earn points for your running activities
-- **Activity Transfer**: Select and transfer specific activities to the game
-- **User Authentication**: Secure user management with Supabase
-- **Responsive Design**: Works on desktop and mobile devices
+- **🗺️ Territorialt Gameplay**: Erobr territorie baseret på dine løberuter
+- **👥 Multiplayer Ligaer**: Konkurrér mod andre løbere i private/offentlige ligaer
+- **📱 Strava Integration**: Automatisk import af løbeaktiviteter via OAuth
+- **💳 Subscription Billing**: Stripe integration for premium features
+- **🔒 Sikkerhed-først**: Row Level Security (RLS) og comprehensive OWASP compliance
+- **⚡ Performance**: PostGIS geospatiale beregninger, optimeret database queries
+- **📊 Real-time Updates**: Live territorio opdateringer med Supabase Realtime
 
 ## 🚀 Live Application
 
 - **Production**: https://runaro.dk
-- **Debug Interface**: https://runaro.dk/debug/strava
+- **Admin Dashboard**: https://runaro.dk/admin/errors
+- **Strava Debug**: https://runaro.dk/debug/strava
 
-## 🛠 Technologies Used
+## 🛠️ Tech Stack
 
-- **Frontend**: Vite + React + TypeScript
-- **UI**: shadcn-ui + Tailwind CSS  
-- **Backend**: Supabase (Database + Edge Functions)
-- **Deployment**: Cloudflare Pages
-- **Integration**: Strava OAuth API
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Framework**: shadcn-ui + Radix UI + Tailwind CSS
+- **Backend**: Supabase (PostgreSQL + PostGIS + Edge Functions + Auth)
+- **Deployment**: Cloudflare Pages + Workers
+- **Maps**: Leaflet + React-Leaflet
+- **Payments**: Stripe + Customer Portal
+- **Testing**: Vitest + React Testing Library
+- **CI/CD**: GitHub Actions + Automated deployments
 
-## 🏗 Getting Started
+## 🏗️ Quick Start
 
+### Automatisk Setup (Anbefalet)
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/jenswahlerslife/runaro.git
-
-# Navigate to project directory
 cd runaro
 
+# Kør automated setup script
+chmod +x scripts/dev-setup.sh
+./scripts/dev-setup.sh
+```
+
+### Manuel Setup
+```bash
 # Install dependencies
-npm install
+npm ci
+
+# Setup miljøvariabler
+cp .env.example .env.local
+# Udfyld .env.local med dine API keys
+
+# Type check
+npm run type-check
 
 # Start development server
 npm run dev
+```
+
+## 🧪 Development
+
+### Core Commands
+```bash
+npm run dev           # Development server (localhost:5173)
+npm run build         # Production build
+npm run test          # Run tests
+npm run test:coverage # Test coverage report
+npm run lint          # ESLint check
+npm run lint:fix      # Fix linting errors
+npm run format        # Format code with Prettier
+```
+
+### Database Operations
+```bash
+npm run db:setup      # Initial Supabase setup
+npm run db:push       # Deploy migrations to remote
+npm run db:pull       # Pull remote schema to local
+npm run db:new        # Create new migration
+```
+
+### Deployment
+```bash
+npm run deploy:quick  # Quick build + Cloudflare Pages deploy
+npm run cf:status     # Check deployment status
+npm run cf:logs       # View deployment logs
 ```
 
 ## 📁 Project Structure

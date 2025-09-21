@@ -1,5 +1,5 @@
 name = "runaro-game-finish-cron"
-main = "game-finish-cron.js"
+main = "game-finish-cron-refactored.js"
 compatibility_date = "2024-09-03"
 
 # Cron trigger - runs every 5 minutes
@@ -9,4 +9,6 @@ crons = ["*/5 * * * *"]
 # Environment variables
 [vars]
 SUPABASE_URL = "https://ojjpslrhyutizwpvvngu.supabase.co"
-CRON_SECRET = "game-finish-cron-secret-2025"
+
+# Secrets are provided via Wrangler Secrets, do NOT commit here:
+#   wrangler secret put CRON_SECRET

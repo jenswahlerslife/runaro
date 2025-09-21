@@ -1,0 +1,494 @@
+{
+  "timestamp": "2025-09-20T09:10:22.091Z",
+  "project": "Runaro Territory Game",
+  "database_url": "https://ojjpslrhyutizwpvvngu.supabase.co",
+  "access_level": "FULL (Service Role)",
+  "summary": {
+    "tables_analyzed": 10,
+    "functions_checked": 8,
+    "security_policies": 2,
+    "performance_tests": 2,
+    "total_issues": 0
+  },
+  "analysis": {
+    "tables": [
+      {
+        "name": "profiles",
+        "columns": [
+          {
+            "name": "id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "user_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "role",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "created_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "updated_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "username",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "display_name",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "strava_access_token",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "strava_refresh_token",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "strava_athlete_id",
+            "type": "number",
+            "hasData": true
+          },
+          {
+            "name": "strava_expires_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "total_points",
+            "type": "number",
+            "hasData": true
+          }
+        ],
+        "rowCount": 7,
+        "indexes": [],
+        "constraints": [],
+        "issues": []
+      },
+      {
+        "name": "activities",
+        "columns": [],
+        "rowCount": 0,
+        "indexes": [],
+        "constraints": [],
+        "issues": [
+          "Table is empty"
+        ]
+      },
+      {
+        "name": "leagues",
+        "columns": [
+          {
+            "name": "id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "description",
+            "type": "object",
+            "hasData": false
+          },
+          {
+            "name": "invite_code",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "creator_id",
+            "type": "object",
+            "hasData": false
+          },
+          {
+            "name": "season_start_date",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "season_end_date",
+            "type": "object",
+            "hasData": false
+          },
+          {
+            "name": "created_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "updated_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "admin_user_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "is_public",
+            "type": "boolean",
+            "hasData": true
+          },
+          {
+            "name": "max_members",
+            "type": "number",
+            "hasData": true
+          },
+          {
+            "name": "created_by",
+            "type": "object",
+            "hasData": false
+          }
+        ],
+        "rowCount": 17,
+        "indexes": [],
+        "constraints": [],
+        "issues": []
+      },
+      {
+        "name": "league_memberships",
+        "columns": [
+          {
+            "name": "league_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "user_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "role",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "joined_at",
+            "type": "string",
+            "hasData": true
+          }
+        ],
+        "rowCount": 18,
+        "indexes": [],
+        "constraints": [],
+        "issues": []
+      },
+      {
+        "name": "league_join_requests",
+        "columns": [
+          {
+            "name": "id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "league_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "user_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "message",
+            "type": "object",
+            "hasData": false
+          },
+          {
+            "name": "created_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "decided_at",
+            "type": "object",
+            "hasData": false
+          }
+        ],
+        "rowCount": 5,
+        "indexes": [],
+        "constraints": [],
+        "issues": []
+      },
+      {
+        "name": "games",
+        "columns": [
+          {
+            "name": "id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "league_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "start_date",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "end_date",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "winner_user_id",
+            "type": "object",
+            "hasData": false
+          },
+          {
+            "name": "created_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "created_by",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "duration_days",
+            "type": "number",
+            "hasData": true
+          },
+          {
+            "name": "activated_at",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "finished_at",
+            "type": "object",
+            "hasData": false
+          }
+        ],
+        "rowCount": 65,
+        "indexes": [],
+        "constraints": [],
+        "issues": []
+      },
+      {
+        "name": "player_bases",
+        "columns": [],
+        "rowCount": 0,
+        "indexes": [],
+        "constraints": [],
+        "issues": [
+          "Table is empty"
+        ]
+      },
+      {
+        "name": "territory_ownership",
+        "columns": [],
+        "rowCount": 0,
+        "indexes": [],
+        "constraints": [],
+        "issues": [
+          "Table is empty"
+        ]
+      },
+      {
+        "name": "subscriptions",
+        "columns": [],
+        "rowCount": 0,
+        "indexes": [],
+        "constraints": [],
+        "issues": [
+          "Table is empty"
+        ]
+      },
+      {
+        "name": "error_reports",
+        "columns": [
+          {
+            "name": "id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "user_id",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "error_type",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "error_message",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "error_stack",
+            "type": "object",
+            "hasData": false
+          },
+          {
+            "name": "url",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "user_agent",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "timestamp",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "severity",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "source",
+            "type": "string",
+            "hasData": true
+          },
+          {
+            "name": "context",
+            "type": "object",
+            "hasData": true
+          },
+          {
+            "name": "resolved",
+            "type": "boolean",
+            "hasData": true
+          },
+          {
+            "name": "created_at",
+            "type": "string",
+            "hasData": true
+          }
+        ],
+        "rowCount": 12,
+        "indexes": [],
+        "constraints": [],
+        "issues": []
+      }
+    ],
+    "functions": [
+      {
+        "name": "get_user_leagues",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "create_league_with_owner",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "join_league",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "manage_league_membership",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "create_game",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "get_active_game_for_league",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "set_player_base",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      },
+      {
+        "name": "finish_due_games",
+        "exists": false,
+        "error": "supabase.rpc(...).catch is not a function"
+      }
+    ],
+    "policies": [
+      {
+        "table": "profiles",
+        "description": "Profile access control",
+        "accessible": false,
+        "dataReturned": 0,
+        "issues": []
+      },
+      {
+        "table": "activities",
+        "description": "Activity access control",
+        "accessible": true,
+        "dataReturned": 0,
+        "issues": []
+      }
+    ],
+    "issues": [],
+    "recommendations": [],
+    "performance": [
+      {
+        "name": "League loading speed",
+        "duration_ms": 39,
+        "status": "good"
+      },
+      {
+        "name": "Profile query speed",
+        "duration_ms": 40,
+        "status": "good"
+      }
+    ]
+  },
+  "recommendations": [
+    "🛡️  Regular security policy audits",
+    "📈 Set up database monitoring",
+    "🧪 Implement automated testing for RLS policies",
+    "📊 Create database performance baselines"
+  ]
+}

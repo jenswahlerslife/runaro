@@ -45,12 +45,28 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Authorization code is required' }), { status: 400, headers });
     }
 
-    // ENV variabler - fallback til hardcoded for nu
-    const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID') || '174654';
-    const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET') || '1b87ab9bffbda09608bda2bdc9e5d2036f0ddfd6';
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://ojjpslrhyutizwpvvngu.supabase.co';
-    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjIzMDI0NSwiZXhwIjoyMDcxODA2MjQ1fQ.Wm6AbiLNjIVM-T4a7TUhBMphb5EW9fMMLJC9-wSJNS4';
-    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzAyNDUsImV4cCI6MjA3MTgwNjI0NX0.qsKY1YPBaphie0BwV71-kHcg73ZfKNuBUHR9yHO78zA';
+    // SIKKERHED: Kræv miljøvariabler - aldrig hardkodede secrets
+    const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID');
+    const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+
+    // Valider at alle nødvendige miljøvariabler er sat
+    const missing = [];
+    if (!STRAVA_CLIENT_ID) missing.push('STRAVA_CLIENT_ID');
+    if (!STRAVA_CLIENT_SECRET) missing.push('STRAVA_CLIENT_SECRET');
+    if (!SUPABASE_URL) missing.push('SUPABASE_URL');
+    if (!SERVICE_ROLE) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+    if (!ANON_KEY) missing.push('SUPABASE_ANON_KEY');
+
+    if (missing.length > 0) {
+      console.error('Missing required environment variables:', missing);
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error - missing environment variables' }),
+        { status: 500, headers }
+      );
+    }
 
     // Auth: prøv at finde userId fra JWT, ellers fra state
     let userId: string | null = null;

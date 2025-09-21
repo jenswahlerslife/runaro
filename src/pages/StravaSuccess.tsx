@@ -8,20 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { MapPin, Clock, Zap, ArrowRight, Upload } from 'lucide-react';
 
-interface StravaActivity {
-  id: number;
-  name: string;
-  distance: number;
-  moving_time: number;
-  type: string;
-  start_date: string;
-  average_speed: number;
-  max_speed?: number;
-  total_elevation_gain?: number;
-  map: {
-    summary_polyline?: string;
-  };
-}
+import type { StravaActivity } from '@/types/strava';
 
 const StravaSuccess = () => {
   const navigate = useNavigate();
@@ -65,20 +52,8 @@ const StravaSuccess = () => {
     fetchRecentActivities();
   }, [user, toast]);
 
-  const formatDistance = (meters: number) => {
-    return (meters / 1000).toFixed(2) + ' km';
-  };
-
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return hours > 0 ? `${hours}t ${minutes}m` : `${minutes}m`;
-  };
-
-  const formatSpeed = (metersPerSecond: number) => {
-    const kmPerHour = (metersPerSecond * 3.6).toFixed(1);
-    return `${kmPerHour} km/t`;
-  };
+  // Formatting helpers moved to shared util for reuse and testing
+  import { formatDistance, formatTime, formatSpeed } from '@/utils/format';
 
   const handleTransferActivity = async (activity: StravaActivity) => {
     setTransferring(activity.id);
@@ -101,10 +76,10 @@ const StravaSuccess = () => {
       // Remove transferred activity from list
       setActivities(prev => prev.filter(a => a.id !== activity.id));
 
-      // Redirect to map page to see the territory with activity ID
+      // Redirect to map page to see the territory with activity ID and animation
       setTimeout(() => {
-        console.log('Redirecting to /map to show territory...');
-        navigate(`/map?aid=${activity.id}`);
+        console.log('Redirecting to /map to show territory with animation...');
+        navigate(`/map?aid=${activity.id}&animate=true`);
       }, 1500);
     } catch (error: any) {
       console.error('Transfer error:', error);

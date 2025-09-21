@@ -1,138 +1,153 @@
-# 🚀 Supabase Deployment Guide
+# SQL Migration Deployment Guide for Supabase Production
 
-## ⚠️ CRITICAL FIRST STEP: Cloudflare _redirects
+## Overview
+This guide provides multiple methods to deploy the `deploy-create-game-migration.sql` file to your Supabase production database without using the Supabase CLI.
 
-**MUST DO FIRST:** Create `_redirects` file in project root:
-```
-/auth/strava/callback  https://ojjpslrhyutizwpvvngu.supabase.co/functions/v1/strava-auth  302
-/*                     /index.html  200
-```
+**Project Details:**
+- Project Ref: `ojjpslrhyutizwpvvngu`
+- Database URL: `https://ojjpslrhyutizwpvvngu.supabase.co`
+- Migration File: `deploy-create-game-migration.sql`
 
-Then redeploy your Cloudflare Pages site. This ensures Strava callbacks hit edge function directly instead of React router.
+## Migration Summary
+The migration enhances the `create_game` function with:
+- ✅ Duration days parameter support (14-30 days for Pro plans, fixed 14 days for Free plans)
+- ✅ Subscription plan validation
+- ✅ Backward compatibility with existing function calls
+- ✅ Proper security with SECURITY DEFINER and locked search_path
+- ✅ Comprehensive error handling and validation
 
-## Prerequisites
-- Supabase CLI installed: `npm install -g @supabase/supabase-js`
-- Access to Supabase dashboard: https://supabase.com/dashboard
-- Project ID: `ojjpslrhyutizwpvvngu`
+## Deployment Methods (Ranked by Recommendation)
 
-## 1. Link Project to Supabase
-```bash
-# Link your local project to the remote Supabase project
-npx supabase link --project-ref ojjpslrhyutizwpvvngu
+### 🥇 Method 1: Supabase Dashboard SQL Editor (RECOMMENDED)
+**Best for: Quick deployment, no setup required**
 
-# You'll be prompted for your Supabase access token
-# Get it from: https://supabase.com/dashboard/account/tokens
-```
+**Advantages:**
+- ✅ No local software installation needed
+- ✅ Direct web-based access
+- ✅ Built-in syntax highlighting
+- ✅ Immediate error feedback
+- ✅ Most user-friendly
 
-## 2. Deploy Database Migrations
-```bash
-# Deploy all pending migrations to production
-npx supabase db push
+**Steps:**
+1. Go to https://supabase.com/dashboard/project/ojjpslrhyutizwpvvngu
+2. Click "SQL Editor" in sidebar
+3. Click "New query"
+4. Copy contents from `deploy-create-game-migration.sql`
+5. Paste and click "Run"
 
-# Alternative: Deploy specific migration
-npx supabase db push --include-schemas public
-```
+**Files:** See detailed instructions in `dashboard-deployment-instructions.md`
 
-## 3. Deploy Edge Functions
-```bash
-# Deploy all functions at once
-npx supabase functions deploy
+### 🥈 Method 2: psql Command Line
+**Best for: Developers familiar with PostgreSQL tools**
 
-# Or deploy individual functions:
-npx supabase functions deploy strava-auth
-npx supabase functions deploy strava-activities  
-npx supabase functions deploy transfer-activity
-```
+**Prerequisites:**
+- PostgreSQL client (psql) installed
+- Database password from Supabase Dashboard
 
-## 4. Set Environment Variables
-In Supabase Dashboard → Project Settings → Edge Functions:
+**Steps:**
+1. Get database password from Supabase Dashboard → Connect → Direct connection
+2. Run the batch file: `deploy-migration-psql.bat`
+3. Enter password when prompted
 
-```
-STRAVA_CLIENT_ID=174654
-STRAVA_CLIENT_SECRET=1b87ab9bfbda09608bda2bdc9e5d2036f0ddfd6
-SUPABASE_URL=https://ojjpslrhyutizwpvvngu.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjIzMDI0NSwiZXhwIjoyMDcxODA2MjQ1fQ.Wm6AbiLNjIVM-T4a7TUhBMphb5EW9fMMLJC9-wSJNS4
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzAyNDUsImV4cCI6MjA3MTgwNjI0NX0.qsKY1YPBaphie0BwV71-kHcg73ZfKNuBUHR9yHO78zA
-```
+**Files:**
+- `deploy-migration-psql.bat` - Windows batch script
+- Works on Windows, Mac, Linux with psql installed
 
-## 5. Verify Deployment
-```bash
-# Check function status
-npx supabase functions list
+### 🥉 Method 3: Node.js Script
+**Best for: Automated deployment or integration into build processes**
 
-# Test functions via curl
-curl -X POST https://ojjpslrhyutizwpvvngu.supabase.co/functions/v1/strava-auth \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ANON_KEY" \
-  -d '{"test": true}'
-```
+**Prerequisites:**
+- Node.js installed
+- Install pg package: `npm install pg`
+- Database password from Supabase Dashboard
 
-## 6. Test OAuth Flow
+**Steps:**
+1. Install dependencies: `npm install pg`
+2. Set DB_PASSWORD environment variable or edit script
+3. Run: `node deploy-migration-node.js`
 
-### Step 1: Generate Test OAuth URL
-```
-https://www.strava.com/oauth/authorize?
-  client_id=174654&
-  redirect_uri=https://runaro.dk/auth/strava/callback&
-  response_type=code&
-  scope=read,activity:read_all&
-  state=YOUR_BASE64_STATE&
-  approval_prompt=force
-```
+**Files:**
+- `deploy-migration-node.js` - Complete Node.js deployment script
+- Includes connection verification and error handling
 
-### Step 2: Complete Flow
-1. Visit OAuth URL in browser
-2. Authorize with Strava
-3. Check redirect to runaro.dk/auth/strava/callback
-4. Verify automatic redirect to edge function
-5. Confirm final redirect to success page
+## Getting Your Database Password
 
-## 7. Debug Commands
-```bash
-# View function logs
-npx supabase functions logs strava-auth --level=debug
+For Methods 2 & 3, you need your database password:
 
-# Reset database (CAUTION!)
-npx supabase db reset
+1. Go to https://supabase.com/dashboard/project/ojjpslrhyutizwpvvngu
+2. Click "Connect" button at the top
+3. Select "Direct connection" tab
+4. Copy the password from the connection string:
+   `postgresql://postgres:[YOUR_PASSWORD]@db.ojjpslrhyutizwpvvngu.supabase.co:5432/postgres`
 
-# Generate new migration
-npx supabase db diff --file new_migration
+## Verification Steps
 
-# Pull remote schema
-npx supabase db pull
+After deployment, verify the migration succeeded:
+
+### 1. Check Function Exists
+```sql
+SELECT
+  routine_name,
+  specific_name,
+  routine_type
+FROM information_schema.routines
+WHERE routine_name = 'create_game'
+AND routine_schema = 'public'
+ORDER BY specific_name;
 ```
 
-## 8. Production URLs
-- **Strava OAuth Callback**: `https://runaro.dk/auth/strava/callback`
-- **Success Page**: `https://runaro.dk/strava/success`
-- **Debug Page**: `https://runaro.dk/debug/strava`
-- **Edge Functions**: `https://ojjpslrhyutizwpvvngu.supabase.co/functions/v1/`
+Expected result: 2 functions
+- `create_game(uuid, text)` - backward compatibility
+- `create_game(uuid, text, integer)` - enhanced with duration_days
 
-## 9. Quick Deploy Script
-Save as `deploy.sh`:
-```bash
-#!/bin/bash
-echo "🚀 Deploying Runaro Strava Integration..."
-
-# Deploy migrations
-echo "📊 Deploying database migrations..."
-npx supabase db push
-
-# Deploy functions
-echo "⚡ Deploying edge functions..."
-npx supabase functions deploy strava-auth
-npx supabase functions deploy strava-activities
-npx supabase functions deploy transfer-activity
-
-echo "✅ Deployment complete!"
-echo "🔗 Test at: https://runaro.dk/debug/strava"
+### 2. Test Function Call (Optional)
+```sql
+-- This should return an error about league not found (expected)
+SELECT public.create_game(
+  '00000000-0000-0000-0000-000000000000'::uuid,
+  'Test Game',
+  21
+);
 ```
 
-## 10. Troubleshooting
-- **401 Unauthorized**: Check JWT token in Authorization header
-- **502 Bad Gateway**: Edge function deployment or environment variables
-- **CORS errors**: Verify Origin headers in edge function CORS setup
-- **Database errors**: Check RLS policies and user permissions
+## Security Notes
 
----
-**Ready for production! 🎯**
+- ⚠️ **Service Role Key**: The provided JWT has admin privileges. Keep it secure.
+- ⚠️ **Database Password**: Never commit database passwords to version control.
+- ✅ **Migration Safety**: The SQL uses proper security practices with SECURITY DEFINER.
+
+## Troubleshooting
+
+### Common Issues:
+
+**"Function already exists" error:**
+- ✅ Normal - the migration drops existing functions first
+
+**"Permission denied" error:**
+- ❌ Check your database password is correct
+- ❌ Verify you're using the correct project reference
+
+**"Connection timeout" error:**
+- ❌ Check your internet connection
+- ❌ Try using session pooler connection string instead
+
+**"SQL syntax error":**
+- ❌ Ensure you copied the entire SQL file contents
+- ❌ Check for any clipboard encoding issues
+
+### Support
+
+If you encounter issues:
+1. Check the Supabase Dashboard logs
+2. Verify your project is active and not paused
+3. Ensure your plan supports the required database operations
+
+## Cleanup
+
+After successful deployment, you can safely delete these deployment files:
+- `deploy-migration-psql.bat`
+- `deploy-migration-node.js`
+- `dashboard-deployment-instructions.md`
+- This guide (`DEPLOYMENT_GUIDE.md`)
+
+Keep the original migration file (`deploy-create-game-migration.sql`) for reference.

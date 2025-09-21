@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Check, X, Users, Search, Crown, Shield, UserPlus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, X, Users, Search, Crown, Shield, UserPlus, Trash2, ChevronUp, ChevronDown, Play, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { manageLeagueMembership } from '@/lib/leagues';
+import { rpcGetActiveGameForLeague } from '@/lib/gamesApi';
+import { formatDuration, intervalToDuration } from 'date-fns';
 
 interface Member {
   id: string;
@@ -47,6 +49,7 @@ interface League {
 export default function LeagueMembers() {
   const { leagueId } = useParams<{ leagueId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -61,14 +64,53 @@ export default function LeagueMembers() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searching, setSearching] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  
+  const [activeGame, setActiveGame] = useState<null | {
+    id: string;
+    name: string;
+    status: "setup" | "active";
+    end_at: string | null;
+    time_left_seconds: number | null;
+  }>(null);
+
   const { subscription, isPro } = useSubscription();
 
   useEffect(() => {
     if (!leagueId || !user) return;
-    
+
     loadData();
   }, [leagueId, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!leagueId) return;
+      try {
+        const g = await rpcGetActiveGameForLeague(leagueId);
+        if (!cancelled && g && (g as any).id) {
+          setActiveGame({
+            id: (g as any).id!,
+            name: (g as any).name ?? "Game",
+            status: (g as any).status ?? "active",
+            end_at: (g as any).end_at ?? null,
+            time_left_seconds: (g as any).time_left_seconds ?? null,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load active game:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [leagueId]);
+
+  const timeLeftLabel = useMemo(() => {
+    if (!activeGame?.time_left_seconds || activeGame.time_left_seconds <= 0) return "—";
+    const dur = intervalToDuration({ start: 0, end: activeGame.time_left_seconds * 1000 });
+    // Vis fx "12 timer" eller "1 dag 3 t"
+    return formatDuration(
+      { days: dur.days, hours: dur.hours, minutes: dur.minutes },
+      { format: ["days","hours","minutes"], zero: false }
+    );
+  }, [activeGame]);
 
   const loadData = async () => {
     try {
@@ -146,7 +188,7 @@ export default function LeagueMembers() {
         if (requestsError) {
           console.error('Error loading requests:', requestsError);
           setRequests([]);
-        } else if (!rawRequests || rawRequests.length === 0) {
+        } else if (!rawRequests || (rawRequests ?? []).length === 0) {
           setRequests([]);
         } else {
           // Step 2: Hent profiler for disse user_ids (best-effort)
@@ -252,7 +294,7 @@ export default function LeagueMembers() {
       joined_at: new Date().toISOString()
     };
     
-    console.log('📝 Before update - Requests:', requests.length, 'Members:', members.length);
+    console.log('📝 Before update - Requests:', (requests ?? []).length, 'Members:', (members ?? []).length);
     
     // Opdater UI optimistisk
     const originalRequests = [...requests];
@@ -261,7 +303,7 @@ export default function LeagueMembers() {
     const newRequests = requests.filter(r => r.id !== request.id);
     const newMembers = [...members, optimisticMember];
     
-    console.log('📝 After filter - New requests:', newRequests.length, 'New members:', newMembers.length);
+    console.log('📝 After filter - New requests:', (newRequests ?? []).length, 'New members:', (newMembers ?? []).length);
     
     setRequests(newRequests);
     setMembers(newMembers);
@@ -323,13 +365,13 @@ export default function LeagueMembers() {
     console.log('🚀 Reject request called for:', request.display_name, request.id);
     setActionLoading(request.id);
     
-    console.log('📝 Before reject - Requests:', requests.length);
+    console.log('📝 Before reject - Requests:', (requests ?? []).length);
     
     // Optimistisk opdatering: fjern request med det samme
     const originalRequests = [...requests];
     const newRequests = requests.filter(r => r.id !== request.id);
     
-    console.log('📝 After filter - New requests:', newRequests.length);
+    console.log('📝 After filter - New requests:', (newRequests ?? []).length);
     setRequests(newRequests);
     
     try {
@@ -388,7 +430,7 @@ export default function LeagueMembers() {
     if (!league || !isAdmin) return;
 
     // Check plan limits
-    const currentMemberCount = members.length;
+    const currentMemberCount = (members ?? []).length;
     const maxMembers = isPro ? 50 : 3;
     
     if (currentMemberCount >= maxMembers) {
@@ -556,7 +598,7 @@ export default function LeagueMembers() {
           <div>
             <h1 className="text-2xl font-semibold">{league?.name || 'League'} Members</h1>
             <p className="text-sm text-muted-foreground">
-              {members.length} / {league?.max_members || 0} medlemmer
+              {(members ?? []).length} / {league?.max_members || 0} medlemmer
             </p>
           </div>
         </div>
@@ -632,12 +674,54 @@ export default function LeagueMembers() {
                     </div>
                   );
                 })}
-                {members.length === 0 && (
+                {(members ?? []).length === 0 && (
                   <p className="text-center text-sm text-muted-foreground">Ingen medlemmer endnu.</p>
                 )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Active Game Section */}
+          {activeGame && (
+            <Card className="mt-6">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Trophy className="h-5 w-5" />
+                  Spil i gang
+                </CardTitle>
+                <div className="text-sm text-muted-foreground">
+                  {activeGame.status === "setup" ? "Venter på baser" : "Live"}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Game</div>
+                    <div className="font-semibold">{activeGame.name}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Tid tilbage</div>
+                    <div className="font-semibold">{timeLeftLabel}</div>
+                  </div>
+                  <div className="md:text-right">
+                    <Button
+                      className="w-full md:w-auto"
+                      onClick={() => {
+                        const path =
+                          activeGame.status === "setup"
+                            ? `/activities?game=${activeGame.id}&selectBase=1`
+                            : `/games/${activeGame.id}`;
+                        navigate(path);
+                      }}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      {activeGame.status === "setup" ? "Start game" : "Gå til spillet"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Join Requests Section (only for admins/owners) */}
           {isAdmin && (
@@ -646,8 +730,8 @@ export default function LeagueMembers() {
                 <CardTitle className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5" />
                   Anmodninger
-                  {requests.length > 0 && (
-                    <Badge variant="secondary">{requests.length}</Badge>
+                  {(requests ?? []).length > 0 && (
+                    <Badge variant="secondary">{(requests ?? []).length}</Badge>
                   )}
                 </CardTitle>
               </CardHeader>
@@ -684,7 +768,7 @@ export default function LeagueMembers() {
                       </div>
                     </div>
                   ))}
-                  {requests.length === 0 && (
+                  {(requests ?? []).length === 0 && (
                     <p className="text-center text-sm text-muted-foreground">Ingen anmodninger endnu</p>
                   )}
                 </div>
@@ -702,12 +786,12 @@ export default function LeagueMembers() {
                 </CardTitle>
                 {league && (
                   <p className="text-sm text-muted-foreground">
-                    {members.length >= (isPro ? 50 : 3) ? (
+                    {(members ?? []).length >= (isPro ? 50 : 3) ? (
                       <span className="text-destructive font-medium">
                         Ligaen er fuld ({isPro ? '50' : '3'} medlemmer max for din plan)
                       </span>
                     ) : (
-                      `${(isPro ? 50 : 3) - members.length} pladser tilbage`
+                      `${(isPro ? 50 : 3) - (members ?? []).length} pladser tilbage`
                     )}
                   </p>
                 )}
@@ -731,9 +815,9 @@ export default function LeagueMembers() {
                     <p className="text-sm text-muted-foreground text-center">Søger...</p>
                   )}
                   
-                  {searchResults.length > 0 && (
+                  {(searchResults ?? []).length > 0 && (
                     <div className="space-y-2">
-                      {searchResults.map((user) => (
+                      {(searchResults ?? []).map((user) => (
                         <div key={user.user_id} className="flex items-center justify-between rounded-lg border p-3">
                           <div>
                             <p className="font-medium">{user.display_name}</p>
@@ -752,7 +836,7 @@ export default function LeagueMembers() {
                               <Button
                                 size="sm"
                                 onClick={() => addUserToLeague(user)}
-                                disabled={actionLoading === user.user_id || members.length >= (isPro ? 50 : 3)}
+                                disabled={actionLoading === user.user_id || (members ?? []).length >= (isPro ? 50 : 3)}
                               >
                                 <UserPlus className="mr-1 h-4 w-4" />
                                 Tilføj
@@ -764,7 +848,7 @@ export default function LeagueMembers() {
                     </div>
                   )}
                   
-                  {searchTerm && !searching && searchResults.length === 0 && (
+                  {searchTerm && !searching && (searchResults ?? []).length === 0 && (
                     <p className="text-center text-sm text-muted-foreground">Ingen brugere fundet</p>
                   )}
                 </div>

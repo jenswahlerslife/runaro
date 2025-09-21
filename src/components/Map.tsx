@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle, Popup, useMap, Polygon } from 'react-leaflet';
 import { Icon, LatLngExpression, Map as LeafletMap, LatLngBounds } from 'leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
 import { Navigation, Sun, Moon } from 'lucide-react';
@@ -18,13 +19,61 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Animation function to show route from start to end, then show territory
+const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territory) => {
+  if (!territory.routeCoordinates || territory.routeCoordinates.length < 2) {
+    console.warn('[Animation] No route coordinates available for animation');
+    return;
+  }
+
+  const routeCoords = territory.routeCoordinates;
+  console.log('[Animation] Starting route animation with', routeCoords.length, 'points');
+
+  // Create a temporary polyline for animation
+  const animatedLine = L.polyline([], {
+    color: '#ef4444',
+    weight: 4,
+    opacity: 0.8
+  }).addTo(map);
+
+  // Fit map to show the entire route
+  const routeBounds = new LatLngBounds(routeCoords);
+  map.fitBounds(routeBounds, { padding: [20, 20] });
+
+  // Animate the route drawing
+  const animationDuration = 2000; // 2 seconds
+  const stepCount = 50; // Number of animation steps
+  const pointsPerStep = Math.max(1, Math.floor(routeCoords.length / stepCount));
+
+  for (let i = 0; i <= stepCount; i++) {
+    const endIndex = Math.min(i * pointsPerStep, routeCoords.length - 1);
+    const currentPoints = routeCoords.slice(0, endIndex + 1);
+
+    animatedLine.setLatLngs(currentPoints);
+
+    // Wait for next animation frame
+    await new Promise(resolve => setTimeout(resolve, animationDuration / stepCount));
+  }
+
+  // Wait a moment, then remove the animated line and show the territory
+  setTimeout(() => {
+    map.removeLayer(animatedLine);
+    console.log('[Animation] Route animation complete, showing territory');
+
+    // Now zoom out slightly to show the territory area
+    const territoryBounds = new LatLngBounds(territory.polygon);
+    map.fitBounds(territoryBounds, { padding: [30, 30] });
+  }, 500);
+};
+
 // Component to handle map instance access and territory bounds
-const MapController: React.FC<{ 
-  userLocation: [number, number] | null; 
+const MapController: React.FC<{
+  userLocation: [number, number] | null;
   territories: Territory[];
   focusActivityId: number | null;
-  onMapReady: (map: LeafletMap) => void; 
-}> = ({ userLocation, territories, focusActivityId, onMapReady }) => {
+  shouldAnimateRoute: boolean;
+  onMapReady: (map: LeafletMap) => void;
+}> = ({ userLocation, territories, focusActivityId, shouldAnimateRoute, onMapReady }) => {
   const map = useMap();
   
   useEffect(() => {
@@ -48,8 +97,15 @@ const MapController: React.FC<{
         const focusTerritory = territories.find(t => t.stravaActivityId === focusActivityId);
         if (focusTerritory) {
           console.log('[MapController] Focusing on specific territory:', focusTerritory.name);
-          const bounds = new LatLngBounds(focusTerritory.polygon);
-          map.fitBounds(bounds, { padding: [20, 20] });
+
+          if (shouldAnimateRoute && focusTerritory.routeCoordinates) {
+            // Animate route from start to end before showing territory
+            animateRouteAndShowTerritory(map, focusTerritory);
+          } else {
+            // Just fit bounds normally
+            const bounds = new LatLngBounds(focusTerritory.polygon);
+            map.fitBounds(bounds, { padding: [20, 20] });
+          }
           return;
         } else {
           console.warn('[MapController] Focus activity not found:', focusActivityId);
@@ -68,7 +124,7 @@ const MapController: React.FC<{
     } else if (territories.length === 0) {
       console.log('[MapController] No territories to fit bounds to');
     }
-  }, [map, territories, focusActivityId]);
+  }, [map, territories, focusActivityId, shouldAnimateRoute]);
 
   return null;
 };
@@ -114,6 +170,7 @@ const Map: React.FC = () => {
   const defaultCenter: LatLngExpression = [55.6761, 12.5683]; // Copenhagen, Denmark
   
   const focusActivityId = searchParams.get('aid') ? parseInt(searchParams.get('aid')!) : null;
+  const shouldAnimateRoute = searchParams.get('animate') === 'true';
 
   useEffect(() => {
     setIsClient(true);
@@ -126,11 +183,30 @@ const Map: React.FC = () => {
       setLoading(true);
       try {
         console.log('[Map] Fetching activities for user:', user.id);
-        
+
+        // First get the user's profile ID (user_activities FK references profiles.id)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileError || !profile?.id) {
+          console.error('[Map] Error fetching profile:', profileError);
+          toast({
+            title: "Error",
+            description: "Could not load user profile",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('[Map] Found profile ID:', profile.id);
+
         const { data: activities, error } = await supabase
           .from('user_activities')
           .select('id, name, activity_type, strava_activity_id, polyline, created_at')
-          .eq('user_id', user.id)
+          .eq('user_id', profile.id)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -289,11 +365,12 @@ const Map: React.FC = () => {
           zoomControl={true}
           attributionControl={false}
         >
-          <MapController 
-            userLocation={showArea} 
+          <MapController
+            userLocation={showArea}
             territories={territories}
             focusActivityId={focusActivityId}
-            onMapReady={handleMapReady} 
+            shouldAnimateRoute={shouldAnimateRoute}
+            onMapReady={handleMapReady}
           />
           <TileLayer
             key={mapStyle}

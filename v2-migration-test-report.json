@@ -1,0 +1,145 @@
+{
+  "test_completed_at": "2025-09-17T08:54:13.974Z",
+  "duration_ms": 1877.4202,
+  "test_results": [
+    {
+      "test": "V2.0 Migration Files",
+      "passed": true,
+      "details": "3/3 migration files found",
+      "timestamp": "2025-09-17T08:54:12.096Z"
+    },
+    {
+      "test": "Database Connectivity",
+      "passed": true,
+      "details": "Connected with 4 functions",
+      "timestamp": "2025-09-17T08:54:12.843Z"
+    },
+    {
+      "test": "20260101000000_v2_base_schema.sql - Tables",
+      "passed": true,
+      "details": "3/3 tables found",
+      "timestamp": "2025-09-17T08:54:12.844Z"
+    },
+    {
+      "test": "20260101000000_v2_base_schema.sql - Indexes",
+      "passed": true,
+      "details": "1/1 indexes found",
+      "timestamp": "2025-09-17T08:54:12.844Z"
+    },
+    {
+      "test": "20260101000000_v2_base_schema.sql - Policies",
+      "passed": true,
+      "details": "1/1 policies found",
+      "timestamp": "2025-09-17T08:54:12.844Z"
+    },
+    {
+      "test": "20260101000001_v2_essential_functions.sql - Functions",
+      "passed": true,
+      "details": "2/2 functions found",
+      "timestamp": "2025-09-17T08:54:12.844Z"
+    },
+    {
+      "test": "20260101000002_v2_data_migration.sql - Functions",
+      "passed": true,
+      "details": "1/1 functions found",
+      "timestamp": "2025-09-17T08:54:12.844Z"
+    },
+    {
+      "test": "Function: get_database_health",
+      "passed": true,
+      "details": "Executed in 54.05ms",
+      "timestamp": "2025-09-17T08:54:12.898Z"
+    },
+    {
+      "test": "Function: validate_v2_data_integrity",
+      "passed": true,
+      "details": "Executed in 56.91ms",
+      "timestamp": "2025-09-17T08:54:12.955Z"
+    },
+    {
+      "test": "Function: generate_v2_migration_report",
+      "passed": true,
+      "details": "Executed in 57.97ms",
+      "timestamp": "2025-09-17T08:54:13.013Z"
+    },
+    {
+      "test": "Performance Benchmark",
+      "passed": true,
+      "details": "Average: 67.98ms",
+      "timestamp": "2025-09-17T08:54:13.286Z"
+    },
+    {
+      "test": "Integrity: Profile completeness",
+      "passed": true,
+      "details": "Data integrity maintained",
+      "timestamp": "2025-09-17T08:54:13.335Z"
+    },
+    {
+      "test": "Integrity: League relationships",
+      "passed": true,
+      "details": "Data integrity maintained",
+      "timestamp": "2025-09-17T08:54:13.617Z"
+    },
+    {
+      "test": "Integrity: Game validity",
+      "passed": true,
+      "details": "Data integrity maintained",
+      "timestamp": "2025-09-17T08:54:13.655Z"
+    },
+    {
+      "test": "Integrity: Member status consistency",
+      "passed": true,
+      "details": "Data integrity maintained",
+      "timestamp": "2025-09-17T08:54:13.687Z"
+    },
+    {
+      "test": "Rollback Procedures",
+      "passed": true,
+      "details": "Dry-run rollback executed successfully",
+      "timestamp": "2025-09-17T08:54:13.973Z"
+    }
+  ],
+  "performance_metrics": [
+    {
+      "metric": "function_get_database_health",
+      "duration": 54.0526000000001,
+      "timestamp": "2025-09-17T08:54:12.898Z"
+    },
+    {
+      "metric": "function_validate_v2_data_integrity",
+      "duration": 56.90879999999993,
+      "timestamp": "2025-09-17T08:54:12.955Z"
+    },
+    {
+      "metric": "function_generate_v2_migration_report",
+      "duration": 57.967700000000036,
+      "timestamp": "2025-09-17T08:54:13.013Z"
+    },
+    {
+      "metric": "benchmark_health_check",
+      "duration": 63.6117999999999,
+      "timestamp": "2025-09-17T08:54:13.078Z"
+    },
+    {
+      "metric": "benchmark_profile_count",
+      "duration": 76.78050000000007,
+      "timestamp": "2025-09-17T08:54:13.154Z"
+    },
+    {
+      "metric": "benchmark_league_count",
+      "duration": 60.198500000000195,
+      "timestamp": "2025-09-17T08:54:13.215Z"
+    },
+    {
+      "metric": "benchmark_game_status_query",
+      "duration": 71.31189999999992,
+      "timestamp": "2025-09-17T08:54:13.286Z"
+    }
+  ],
+  "summary": {
+    "total_tests": 16,
+    "passed_tests": 16,
+    "pass_rate": "100.0",
+    "v2_ready": true
+  }
+}

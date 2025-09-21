@@ -2,13 +2,27 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface AuthError {
+  message: string;
+  code?: string;
+}
+
+interface SignInResponse {
+  error: AuthError | null;
+}
+
+interface SignUpResponse {
+  error: AuthError | null;
+  needsConfirmation?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, username: string, displayName: string, age: number) => Promise<{ error: any }>;
-  signInWithMagicLink: (email: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<SignInResponse>;
+  signUp: (email: string, password: string, username: string, displayName: string, age: number) => Promise<SignUpResponse>;
+  signInWithMagicLink: (email: string) => Promise<SignInResponse>;
   signOut: () => Promise<void>;
 }
 
@@ -175,10 +189,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Signup error:', error);
         
         if (error.message?.includes('User already registered')) {
-          return { 
-            error: { 
-              message: 'Email-adressen er allerede registreret. Prøv at logge ind i stedet.' 
-            } 
+          return {
+            error: {
+              message: 'Email-adressen er allerede registreret. Prøv at logge ind i stedet.',
+              code: 'user_already_exists'
+            }
           };
         }
         
@@ -204,10 +219,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
     } catch (e) {
       console.error('Unexpected signup error:', e);
-      return { 
-        error: { 
-          message: 'Uventet fejl ved tilmelding. Prøv igen eller kontakt support.' 
-        } 
+      return {
+        error: {
+          message: 'Uventet fejl ved tilmelding. Prøv igen eller kontakt support.',
+          code: 'unexpected_error'
+        }
       };
     }
   };

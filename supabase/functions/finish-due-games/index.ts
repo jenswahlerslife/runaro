@@ -4,7 +4,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader || authHeader !== `Bearer ${Deno.env.get("CRON_SECRET")}`) {
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Allow either CRON_SECRET or service role key for authentication
+  const isValidAuth = Boolean(
+    authHeader && (
+      authHeader === `Bearer ${cronSecret}` ||
+      authHeader === `Bearer ${serviceRoleKey}`
+    )
+  );
+
+  if (!isValidAuth) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -27,8 +38,12 @@ Deno.serve(async (req) => {
   if (games) {
     for (const g of games) {
       try {
-        await supabase.rpc("finish_game", { p_game_id: g.id });
-        finishedCount++;
+        const { error } = await supabase.rpc("finish_game", { p_game_id: g.id });
+        if (error) {
+          console.error(`Failed to finish game ${g.id}:`, error);
+        } else {
+          finishedCount++;
+        }
       } catch (e) {
         console.error(`Failed to finish game ${g.id}:`, e);
       }

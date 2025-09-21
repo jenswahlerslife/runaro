@@ -9,7 +9,7 @@ interface ErrorReport {
   user_agent?: string;
   severity?: 'error' | 'warning' | 'info' | 'critical';
   source?: 'frontend' | 'backend' | 'supabase';
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export function useErrorReporting() {
@@ -37,7 +37,7 @@ export function useErrorReporting() {
     }
   }, []);
 
-  const logJavaScriptError = useCallback((error: Error, errorInfo?: any) => {
+  const logJavaScriptError = useCallback((error: Error, errorInfo?: Record<string, unknown>) => {
     logError({
       error_type: 'javascript',
       error_message: error.message,
@@ -63,7 +63,7 @@ export function useErrorReporting() {
     });
   }, [logError]);
 
-  const logSupabaseError = useCallback((operation: string, error: any) => {
+  const logSupabaseError = useCallback((operation: string, error: { message: string; code?: string; details?: string; hint?: string }) => {
     logError({
       error_type: 'supabase',
       error_message: `Supabase ${operation} failed: ${error.message}`,
@@ -78,7 +78,7 @@ export function useErrorReporting() {
     });
   }, [logError]);
 
-  const logUserAction = useCallback((action: string, context?: Record<string, any>) => {
+  const logUserAction = useCallback((action: string, context?: Record<string, unknown>) => {
     logError({
       error_type: 'user_action',
       error_message: `User action: ${action}`,
@@ -164,7 +164,7 @@ interface ErrorBoundaryState {
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  private logError?: (error: Error, errorInfo?: any) => void;
+  private logError?: (error: Error, errorInfo?: Record<string, unknown>) => void;
 
   constructor(props: ErrorBoundaryProps) {
     super(props);

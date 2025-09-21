@@ -82,13 +82,13 @@ const Dashboard = () => {
 
       // Load user's activity stats
       const { data: activities, error: activitiesError } = await supabase
-        .from('activities')
-        .select('distance_km')
+        .from('user_activities')
+        .select('distance')
         .eq('user_id', user?.id);
 
       if (activitiesError) throw activitiesError;
 
-      const totalDistance = activities?.reduce((sum, activity) => sum + (activity.distance_km || 0), 0) || 0;
+      const totalDistance = activities?.reduce((sum, activity) => sum + ((activity.distance || 0) / 1000), 0) || 0; // Convert meters to km
       const totalActivities = activities?.length || 0;
 
       setUserStats({

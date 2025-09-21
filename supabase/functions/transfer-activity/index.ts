@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 function cors(origin: string | null) {
   const allowed = origin ?? '*';
@@ -37,19 +37,66 @@ function calculatePoints(distance: number, movingTime: number, elevationGain: nu
   // Basic point calculation formula
   // 1 point per km + bonus for speed + bonus for elevation
   const distanceKm = distance / 1000;
+  if (!movingTime || !isFinite(movingTime) || movingTime <= 0) {
+    // No speed bonus possible
+    return Math.max(Math.floor(distanceKm * 10) + Math.floor((elevationGain || 0) / 10), 1);
+  }
   const speedKmh = distanceKm / (movingTime / 3600);
-  
+
   let points = Math.floor(distanceKm * 10); // 10 points per km
-  
+
   // Speed bonus (more points for faster runs)
   if (speedKmh > 12) points += Math.floor(distanceKm * 5); // Very fast
   else if (speedKmh > 10) points += Math.floor(distanceKm * 3); // Fast
   else if (speedKmh > 8) points += Math.floor(distanceKm * 2); // Good pace
-  
+
   // Elevation bonus
   points += Math.floor(elevationGain / 10); // 1 point per 10m elevation
-  
+
   return Math.max(points, 1); // Minimum 1 point
+}
+
+// Minimal polyline decoder (Google Encoded Polyline Algorithm Format)
+function decodePolyline(str: string, precision = 5): number[][] {
+  const coordinates: number[][] = [];
+  let index = 0, lat = 0, lng = 0;
+  const factor = Math.pow(10, precision);
+
+  while (index < str.length) {
+    let b: number, shift = 0, result = 0;
+    do {
+      b = str.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lat += dlat;
+
+    shift = 0; result = 0;
+    do {
+      b = str.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lng += dlng;
+
+    coordinates.push([lat / factor, lng / factor]);
+  }
+  return coordinates;
+}
+
+function polylineToPostGISGeometry(polylineString: string): string | null {
+  if (!polylineString) return null;
+  try {
+    const coordinates = decodePolyline(polylineString);
+    if (coordinates.length < 2) return null;
+    const points = coordinates.map(([lat, lng]) => `${lng} ${lat}`).join(', ');
+    return `LINESTRING(${points})`;
+  } catch (error) {
+    console.error('Error converting polyline to geometry:', error);
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -57,11 +104,24 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers });
 
   try {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || 'https://ojjpslrhyutizwpvvngu.supabase.co';
-    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjIzMDI0NSwiZXhwIjoyMDcxODA2MjQ1fQ.Wm6AbiLNjIVM-T4a7TUhBMphb5EW9fMMLJC9-wSJNS4';
-    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzAyNDUsImV4cCI6MjA3MTgwNjI0NX0.qsKY1YPBaphie0BwV71-kHcg73ZfKNuBUHR9yHO78zA';
-    const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID') || '174654';
-    const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET') || '1b87ab9bffbda09608bda2bdc9e5d2036f0ddfd6';
+    // Get environment variables - fail if not set properly
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+    const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID');
+    const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET');
+
+    // Validate required environment variables
+    if (!SUPABASE_URL || !SERVICE_ROLE || !ANON_KEY || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+      console.error('Missing required environment variables:', {
+        SUPABASE_URL: !!SUPABASE_URL,
+        SERVICE_ROLE: !!SERVICE_ROLE,
+        ANON_KEY: !!ANON_KEY,
+        STRAVA_CLIENT_ID: !!STRAVA_CLIENT_ID,
+        STRAVA_CLIENT_SECRET: !!STRAVA_CLIENT_SECRET
+      });
+      return new Response(JSON.stringify({ error: 'Function configuration error' }), { status: 500, headers });
+    }
 
     // Get user from JWT
     const jwt = req.headers.get('Authorization')?.replace('Bearer ', '');
@@ -69,6 +129,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Authorization required' }), { status: 401, headers });
     }
 
+    // Create clients
+    const supabaseSrv = createClient(SUPABASE_URL, SERVICE_ROLE);
     const supabaseAnon = createClient(SUPABASE_URL, ANON_KEY);
     const { data: userRes, error: jwtError } = await supabaseAnon.auth.getUser(jwt);
     
@@ -76,7 +138,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers });
     }
 
-    const userId = userRes.user.id;
+    const authUserId = userRes.user.id;
+
+    // Get the profile ID (user_activities FK references profiles.id, not auth.users.id)
+    const { data: profile, error: profileLookupError } = await supabaseSrv
+      .from('profiles')
+      .select('id')
+      .eq('user_id', authUserId)
+      .single();
+
+    if (profileLookupError || !profile?.id) {
+      console.error('Profile lookup failed:', profileLookupError);
+      return new Response(JSON.stringify({ error: 'User profile not found' }), { status: 400, headers });
+    }
+
+    const profileId = profile.id;
 
     // Get request body
     const body = await req.json();
@@ -86,30 +162,29 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Activity ID required' }), { status: 400, headers });
     }
 
-    console.log('Transferring activity:', activityId, 'for user:', userId);
+    console.log('Transferring activity:', activityId, 'for auth user:', authUserId, 'profile:', profileId);
 
     // Get user's Strava tokens from profile
-    const supabaseSrv = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: profile, error: profileError } = await supabaseSrv
+    const { data: stravaProfile, error: profileError } = await supabaseSrv
       .from('profiles')
       .select('strava_access_token, strava_refresh_token, strava_expires_at')
-      .eq('user_id', userId)
+      .eq('user_id', authUserId)
       .single();
 
-    if (profileError || !profile?.strava_access_token) {
+    if (profileError || !stravaProfile?.strava_access_token) {
       return new Response(JSON.stringify({ error: 'Strava not connected' }), { status: 400, headers });
     }
 
-    let accessToken = profile.strava_access_token;
+    let accessToken = stravaProfile.strava_access_token;
 
     // Check if token needs refresh
-    const expiresAt = profile.strava_expires_at ? new Date(profile.strava_expires_at) : null;
+    const expiresAt = stravaProfile.strava_expires_at ? new Date(stravaProfile.strava_expires_at) : null;
     const now = new Date();
     
-    if (expiresAt && now >= expiresAt && profile.strava_refresh_token) {
+    if (expiresAt && now >= expiresAt && stravaProfile.strava_refresh_token) {
       try {
         const refreshedToken = await refreshStravaToken(
-          profile.strava_refresh_token,
+          stravaProfile.strava_refresh_token,
           STRAVA_CLIENT_ID,
           STRAVA_CLIENT_SECRET
         );
@@ -122,7 +197,7 @@ Deno.serve(async (req) => {
             strava_refresh_token: refreshedToken.refresh_token,
             strava_expires_at: new Date(refreshedToken.expires_at * 1000).toISOString(),
           })
-          .eq('user_id', userId);
+          .eq('user_id', authUserId);
 
         accessToken = refreshedToken.access_token;
       } catch (error) {
@@ -162,7 +237,7 @@ Deno.serve(async (req) => {
     const { data: existingActivity } = await supabaseSrv
       .from('user_activities')
       .select('id')
-      .eq('user_id', userId)
+      .eq('user_id', profileId)
       .eq('strava_activity_id', activityId)
       .single();
 
@@ -180,62 +255,15 @@ Deno.serve(async (req) => {
       activity.total_elevation_gain || 0
     );
 
-    // Check if user_activities table exists, create if not
-    const { error: tableCheckError } = await supabaseSrv
-      .from('user_activities')
-      .select('id')
-      .limit(1);
+    // Assume schema is provisioned by migrations. Avoid performing DDL from runtime functions.
 
-    if (tableCheckError && tableCheckError.message.includes('does not exist')) {
-      console.log('Creating user_activities table...');
-      
-      const createTableSQL = `
-        CREATE TABLE IF NOT EXISTS public.user_activities (
-          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id uuid NOT NULL,
-          strava_activity_id bigint NOT NULL,
-          name text NOT NULL,
-          distance real DEFAULT 0,
-          moving_time integer DEFAULT 0,
-          activity_type text NOT NULL DEFAULT 'Run',
-          start_date timestamptz NOT NULL DEFAULT now(),
-          average_speed real DEFAULT 0,
-          max_speed real DEFAULT 0,
-          total_elevation_gain real DEFAULT 0,
-          points_earned integer NOT NULL DEFAULT 0,
-          polyline text,
-          created_at timestamptz NOT NULL DEFAULT now(),
-          UNIQUE(user_id, strava_activity_id)
-        );
-        
-        ALTER TABLE public.user_activities ENABLE ROW LEVEL SECURITY;
-        
-        CREATE POLICY IF NOT EXISTS "Users can view their own activities"
-        ON public.user_activities
-        FOR SELECT
-        USING (user_id = auth.uid());
-
-        CREATE POLICY IF NOT EXISTS "Users can insert their own activities"  
-        ON public.user_activities
-        FOR INSERT
-        WITH CHECK (user_id = auth.uid());
-      `;
-
-      try {
-        const { error: createError } = await supabaseSrv.rpc('exec_sql', { sql: createTableSQL });
-        if (createError) {
-          console.warn('Table creation warning:', createError);
-        } else {
-          console.log('Table created successfully');
-        }
-      } catch (e) {
-        console.warn('Table creation attempt failed:', e);
-      }
-    }
+    // Convert polyline to PostGIS geometry
+    const polylineString = activity.map?.polyline || activity.map?.summary_polyline || null;
+    const routeGeometry = polylineString ? polylineToPostGISGeometry(polylineString) : null;
 
     // Insert activity into database
     const activityData = {
-      user_id: userId,
+      user_id: profileId,
       strava_activity_id: activityId,
       name: activity.name,
       distance: activity.distance || 0,
@@ -246,12 +274,29 @@ Deno.serve(async (req) => {
       max_speed: activity.max_speed || 0,
       total_elevation_gain: activity.total_elevation_gain || 0,
       points_earned: points,
-      polyline: activity.map?.polyline || activity.map?.summary_polyline || null,
+      polyline: polylineString,
+      is_base: false, // New activities are not bases by default
+      included_in_game: false, // Align with DB default to avoid drift
     };
 
-    const { error: insertError } = await supabaseSrv
-      .from('user_activities')
-      .insert(activityData);
+    // Insert activity via RPC to avoid raw SQL in runtime
+    const { error: insertError } = await supabaseSrv.rpc('insert_user_activity_with_route', {
+      p_user_id: profileId,
+      p_strava_activity_id: activityId,
+      p_name: activity.name,
+      p_distance: activity.distance || 0,
+      p_moving_time: activity.moving_time || 0,
+      p_activity_type: activity.type || 'Run',
+      p_start_date: activity.start_date,
+      p_average_speed: activity.average_speed || 0,
+      p_max_speed: activity.max_speed || 0,
+      p_total_elevation_gain: activity.total_elevation_gain || 0,
+      p_points_earned: points,
+      p_polyline: polylineString,
+      p_is_base: false,
+      p_included_in_game: false,
+      p_wkt_route: routeGeometry
+    });
 
     if (insertError) {
       console.error('Database insert failed:', insertError);
@@ -264,16 +309,16 @@ Deno.serve(async (req) => {
     // Update user's total points - try RPC function
     try {
       const { error: pointsError } = await supabaseSrv
-        .rpc('increment_user_points', { 
-          user_uuid: userId, 
-          points_to_add: points 
+        .rpc('increment_user_points', {
+          user_uuid: authUserId,
+          points_to_add: points
         });
 
       if (pointsError) {
         console.warn('Points update failed:', pointsError);
         // Still don't fail the entire request since activity was saved
       } else {
-        console.log(`Added ${points} points to user ${userId}`);
+        console.log(`Added ${points} points to auth user ${authUserId} via profile ${profileId}`);
       }
     } catch (e) {
       console.warn('Points update error:', e);

@@ -61,6 +61,7 @@ export interface Territory {
   activityType: string;
   stravaActivityId: number;
   polygon: LatLng[];
+  routeCoordinates?: LatLng[];
   createdAt: string;
 }
 
@@ -104,6 +105,7 @@ export function createTerritoryFromActivity(
     activityType: activity.activity_type,
     stravaActivityId: activity.strava_activity_id,
     polygon,
+    routeCoordinates: decodedLine, // Store original route for animation
     createdAt: activity.created_at,
   };
 }

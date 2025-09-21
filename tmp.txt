@@ -1,0 +1,3 @@
+formatPaceMinPerKm(movingSec: number | null, distanceValue: number | null): string {
+  if (!movingSec || movingSec <= 0 || !distanceValue || distanceValue <= 0) return "–";
+  const km = distanceVa

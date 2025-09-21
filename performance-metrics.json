@@ -1,0 +1,128 @@
+[
+  {
+    "timestamp": "2025-09-17T08:35:19.891Z",
+    "metrics": [
+      {
+        "name": "Database Health Check",
+        "avgDuration": 203.9242,
+        "minDuration": 83.09900000000005,
+        "maxDuration": 445.0433,
+        "runs": 3,
+        "durations": [
+          445.0433,
+          83.09900000000005,
+          83.63030000000003
+        ]
+      },
+      {
+        "name": "Profile Count Query",
+        "avgDuration": 90.01136666666669,
+        "minDuration": 51.21620000000007,
+        "maxDuration": 165.81860000000006,
+        "runs": 3,
+        "durations": [
+          165.81860000000006,
+          52.99929999999995,
+          51.21620000000007
+        ]
+      },
+      {
+        "name": "Active Leagues Query",
+        "avgDuration": 91.20759999999996,
+        "minDuration": 48.5782999999999,
+        "maxDuration": 173.10760000000005,
+        "runs": 3,
+        "durations": [
+          173.10760000000005,
+          51.93689999999992,
+          48.5782999999999
+        ]
+      },
+      {
+        "name": "League Members Query",
+        "avgDuration": 51.50313333333315,
+        "minDuration": 48.318899999999985,
+        "maxDuration": 56.06049999999959,
+        "runs": 3,
+        "durations": [
+          50.12999999999988,
+          48.318899999999985,
+          56.06049999999959
+        ]
+      },
+      {
+        "name": "Active Games Query",
+        "avgDuration": 45.89783333333359,
+        "minDuration": 42.34750000000031,
+        "maxDuration": 48.63350000000037,
+        "runs": 3,
+        "durations": [
+          42.34750000000031,
+          48.63350000000037,
+          46.71250000000009
+        ]
+      },
+      {
+        "name": "Setup Games Query",
+        "avgDuration": 52.86329999999998,
+        "minDuration": 42.25639999999976,
+        "maxDuration": 63.971900000000005,
+        "runs": 3,
+        "durations": [
+          42.25639999999976,
+          63.971900000000005,
+          52.36160000000018
+        ]
+      },
+      {
+        "name": "Error Reports Count",
+        "avgDuration": 64.71453333333345,
+        "minDuration": 48.8430000000003,
+        "maxDuration": 89.66589999999997,
+        "runs": 3,
+        "durations": [
+          48.8430000000003,
+          89.66589999999997,
+          55.634700000000066
+        ]
+      },
+      {
+        "name": "Activity Count Query",
+        "avgDuration": 82.25646666666671,
+        "minDuration": 57.556800000000294,
+        "maxDuration": 99.28009999999995,
+        "runs": 3,
+        "durations": [
+          57.556800000000294,
+          89.93249999999989,
+          99.28009999999995
+        ]
+      },
+      {
+        "name": "Player Bases Query",
+        "avgDuration": 51.08723333333334,
+        "minDuration": 40.789999999999964,
+        "maxDuration": 70.64080000000013,
+        "runs": 3,
+        "durations": [
+          70.64080000000013,
+          41.83089999999993,
+          40.789999999999964
+        ]
+      },
+      {
+        "name": "Complex Join Query",
+        "avgDuration": 47.383766666666816,
+        "minDuration": 38.776600000000144,
+        "maxDuration": 53.718800000000556,
+        "runs": 3,
+        "durations": [
+          53.718800000000556,
+          38.776600000000144,
+          49.65589999999975
+        ]
+      }
+    ],
+    "summary": {}
+  }
+]

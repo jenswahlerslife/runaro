@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,16 +56,24 @@ function formatPaceMinPerKm(movingSec: number | null, distanceValue: number | nu
   return `${mm}:${ss.toString().padStart(2, "0")} /km`;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('da-DK', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+function formatDate(dateStr?: string | null): string {
+  try {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('da-DK', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return '—';
+  }
 }
 
 export default function ActivitiesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const gameId = searchParams.get("game");
   const selectBase = searchParams.get("selectBase") === "1";
@@ -73,7 +81,6 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [settingBase, setSettingBase] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
-  const [settingGameBase, setSettingGameBase] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -143,24 +150,36 @@ export default function ActivitiesPage() {
   const handleSetBase = async (activityId: string) => {
     setSettingBase(activityId);
     try {
-      const result = await setActivityAsBase(activityId, 50);
-      if (result.success) {
+      if (gameId && selectBase) {
+        // 🎯 Spil-flow: sæt Base pr. spil
+        const result = await setPlayerBase(gameId, activityId);
+        if (!result?.success) {
+          throw new Error(result?.error || "Kunne ikke sætte base for spil");
+        }
+
         toast({
-          title: "Base set successfully",
-          description: `Territory includes ${result.territory_count} of ${result.total_count} activities`,
+          title: "Base valgt til spillet",
+          description: "Spillet starter automatisk når alle spillere har valgt Base.",
         });
-        await refetchData(); // Refresh the data
+
+        // 👉 Efter success: send spilleren til spillet
+        navigate(`/games/${gameId}`);
       } else {
+        // 🗺️ "Global" territory-flow (uden for spil)
+        const result = await setActivityAsBase(activityId, 50);
+        if (!result.success) {
+          throw new Error(result.error || "Ukendt fejl ved base-valg");
+        }
         toast({
-          title: "Error setting base",
-          description: result.error || "Unknown error",
-          variant: "destructive",
+          title: "Base sat",
+          description: `Territory inkluderer ${result.territory_count} af ${result.total_count} aktiviteter`,
         });
+        await refetchData();
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error setting base",
-        description: String(error),
+        title: "Fejl ved base-valg",
+        description: String(error?.message || error),
         variant: "destructive",
       });
     } finally {
@@ -195,36 +214,6 @@ export default function ActivitiesPage() {
     setLoading(false);
   };
 
-  const handleSetGameBase = async (activityId: string) => {
-    if (!gameId) return;
-    
-    setSettingGameBase(activityId);
-    try {
-      const result = await setPlayerBase(gameId, activityId);
-      if (result.success) {
-        toast({
-          title: "Base sat til spil!",
-          description: "Spillet starter automatisk når alle spillere har sat deres Base.",
-        });
-        // Optionally redirect back or show success state
-      } else {
-        toast({
-          title: "Fejl ved sætning af base",
-          description: result.error || "Ukendt fejl",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        title: "Fejl ved sætning af base",
-        description: error.message || "Ukendt fejl",
-        variant: "destructive",
-      });
-    } finally {
-      setSettingGameBase(null);
-    }
-  };
 
   const handleRecalculateTerritory = async () => {
     setRecalculating(true);
@@ -276,7 +265,7 @@ export default function ActivitiesPage() {
             <Target className="h-4 w-4" />
             <AlertDescription>
               Du er ved at vælge din <b>Base</b> til dette spil. Vælg en aktivitet som definerer dit startområde.
-              Spillet starter automatisk, når alle spillets spillere har sat deres Base.
+              Spillet kan startes manuelt når alle spillere har sat deres base.
             </AlertDescription>
           </Alert>
         )}
@@ -503,13 +492,13 @@ export default function ActivitiesPage() {
                         <td className="py-3 px-2">
                           <div className="flex gap-1">
                             {gameId && selectBase ? (
-                              <Button 
-                                variant="default" 
+                              <Button
+                                variant="default"
                                 size="sm"
-                                onClick={() => handleSetGameBase(row.id)}
-                                disabled={settingGameBase === row.id}
+                                onClick={() => handleSetBase(row.id)}
+                                disabled={settingBase === row.id}
                               >
-                                {settingGameBase === row.id ? (
+                                {settingBase === row.id ? (
                                   <RefreshCw className="h-4 w-4 animate-spin" />
                                 ) : (
                                   <>
@@ -521,8 +510,8 @@ export default function ActivitiesPage() {
                             ) : (
                               <>
                                 {!row.is_base && (
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     size="sm"
                                     onClick={() => handleSetBase(row.id)}
                                     disabled={settingBase === row.id}

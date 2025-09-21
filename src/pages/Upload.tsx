@@ -15,6 +15,10 @@ const Upload = () => {
   const [hasStravaConnection, setHasStravaConnection] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Read gameId from query parameters
+  const params = new URLSearchParams(window.location.search);
+  const gameId = params.get("gameId");
+
   useEffect(() => {
     if (user) {
       checkStravaConnection();
@@ -23,16 +27,17 @@ const Upload = () => {
 
   // Auto-redirect when Strava is connected
   useEffect(() => {
-    console.log('Upload useEffect triggered:', { hasStravaConnection, loading, user: !!user });
+    console.log('Upload useEffect triggered:', { hasStravaConnection, loading, user: !!user, gameId });
     if (hasStravaConnection && !loading) {
-      console.log('Strava connected, redirecting to /strava/success in 2 seconds...');
+      const targetUrl = gameId ? `/activities?game=${gameId}&selectBase=1` : '/strava/success';
+      console.log(`Strava connected, redirecting to ${targetUrl} in 2 seconds...`);
       const timer = setTimeout(() => {
-        console.log('Executing redirect to /strava/success');
-        navigate('/strava/success');
+        console.log(`Executing redirect to ${targetUrl}`);
+        navigate(targetUrl);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [hasStravaConnection, loading, navigate]);
+  }, [hasStravaConnection, loading, navigate, gameId]);
 
   const checkStravaConnection = async () => {
     try {
@@ -111,12 +116,12 @@ const Upload = () => {
                       Sender dig videre til dine aktiviteter...
                     </p>
                     <div className="mt-4">
-                      <Button 
-                        onClick={() => navigate('/strava/success')}
+                      <Button
+                        onClick={() => navigate(gameId ? `/activities?game=${gameId}&selectBase=1` : '/strava/success')}
                         className="bg-white/20 hover:bg-white/30 text-white border-white/30"
                         size="lg"
                       >
-                        <span>Gå til mine aktiviteter</span>
+                        <span>{gameId ? "Gå til base-opsætning" : "Gå til mine aktiviteter"}</span>
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </div>

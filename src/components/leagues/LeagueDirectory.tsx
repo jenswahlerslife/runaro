@@ -218,7 +218,7 @@ const LeagueDirectory: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading leagues...</p>
           </div>
-        ) : filteredLeagues.length === 0 ? (
+        ) : (filteredLeagues ?? []).length === 0 ? (
           <div className="text-center py-8">
             <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">No leagues found</h3>
@@ -228,7 +228,7 @@ const LeagueDirectory: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredLeagues.map((league) => {
+            {(filteredLeagues ?? []).map((league) => {
               const buttonState = getLeagueButtonState(league.id);
               
               return (

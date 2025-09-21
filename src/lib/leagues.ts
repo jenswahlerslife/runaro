@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { rpcStartGame } from './gamesApi';
 
 /**
  * Helper function to ensure user has a profile and return user ID
@@ -301,9 +302,9 @@ export async function setPlayerBase(
 }
 
 /**
- * Starts a game
+ * Starts a game with optional duration - delegates to gamesApi.ts
  */
-export async function startGame(gameId: string): Promise<{
+export async function startGame(gameId: string, durationDays?: number): Promise<{
   success: boolean;
   start_date?: string;
   end_date?: string;
@@ -312,11 +313,7 @@ export async function startGame(gameId: string): Promise<{
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.rpc('start_game', {
-      p_game_id: gameId
-    });
-
-    if (error) throw error;
+    const data = await rpcStartGame(gameId, durationDays);
     return data;
   } catch (error) {
     console.error('Error starting game:', error);

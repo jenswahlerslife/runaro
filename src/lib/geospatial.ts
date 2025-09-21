@@ -63,24 +63,26 @@ export function coordinatesToWKT(points: [number, number][]): string | null {
  * @returns Promise with success status
  */
 export async function updateActivityRoute(
-  activityId: string, 
+  activityId: string,
   polylineData: string
 ): Promise<{ success: boolean; error?: string }> {
   const wkt = polylineToWKT(polylineData);
-  
+
   if (!wkt) {
     return { success: false, error: 'Invalid polyline data' };
   }
 
   try {
     const { supabase } = await import('@/integrations/supabase/client');
-    
-    const { error } = await supabase
-      .from('user_activities')
-      .update({ 
-        route: `ST_SetSRID(ST_GeomFromText('${wkt}'), 4326)` 
-      })
-      .eq('id', activityId);
+
+    // Use SQL RPC to update with PostGIS geometry
+    const sql = `
+      UPDATE public.user_activities
+      SET route = ST_SetSRID(ST_GeomFromText('${wkt}'), 4326)
+      WHERE id = '${activityId}'
+    `;
+
+    const { error } = await supabase.rpc('exec_sql', { sql_text: sql });
 
     if (error) {
       console.error('Error updating activity route:', error);

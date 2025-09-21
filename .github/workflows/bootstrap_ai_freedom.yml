@@ -1,0 +1,208 @@
+name: Bootstrap AI Freedom Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      # Cloudflare
+      cf_account_id:
+        description: "Cloudflare Account ID"
+        required: true
+      cf_api_token:
+        description: "Cloudflare API Token (Pages/Workers edit scopes)"
+        required: true
+      cf_pages_project:
+        description: "Cloudflare Pages project name (optional)"
+        required: false
+      cf_workers_script:
+        description: "Cloudflare Workers script name (optional)"
+        required: false
+      cf_worker_cron_secret:
+        description: "Worker CRON_SECRET for finish-due-games"
+        required: false
+      # Supabase
+      supabase_access_token:
+        description: "Supabase Personal Access Token (PAT)"
+        required: true
+      supabase_project_ref:
+        description: "Supabase Project Ref (e.g. abcd1234)"
+        required: true
+      supabase_service_role_key:
+        description: "Supabase SERVICE_ROLE key (optional; avoid prod)"
+        required: false
+      # Vite/Frontend
+      vite_supabase_url:
+        description: "VITE_SUPABASE_URL (e.g. https://<ref>.supabase.co)"
+        required: true
+      vite_supabase_publishable_key:
+        description: "VITE_SUPABASE_PUBLISHABLE_KEY (anon)"
+        required: true
+      vite_stripe_publishable_key:
+        description: "VITE_STRIPE_PUBLISHABLE_KEY (prefer test key)"
+        required: true
+      vite_site_url:
+        description: "VITE_SITE_URL (e.g. https://runaro.dk)"
+        required: true
+      # Options
+      default_branch:
+        description: "Default branch name (optional; auto-detect if empty)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  bootstrap:
+    name: Configure repo for AI freedom
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER: ${{ github.repository_owner }}
+      REPO: ${{ github.event.repository.name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve default branch
+        id: def
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const input = core.getInput('default_branch');
+            if (input) {
+              core.setOutput('branch', input);
+            } else {
+              core.setOutput('branch', context.payload.repository.default_branch || 'main');
+            }
+
+      - name: Create branches (dev, ai/bootstrap) if missing
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          origin_default="${{ steps.def.outputs.branch }}"
+          git fetch origin --prune
+          # dev
+          if git ls-remote --exit-code --heads origin dev >/dev/null 2>&1; then
+            echo "Branch dev exists"
+          else
+            git checkout -B dev "origin/${origin_default}"
+            git push -u origin dev
+          fi
+          # ai/bootstrap
+          if git ls-remote --exit-code --heads origin ai/bootstrap >/dev/null 2>&1; then
+            echo "Branch ai/bootstrap exists"
+          else
+            git checkout -B ai/bootstrap "origin/${origin_default}"
+            git push -u origin ai/bootstrap
+          fi
+          git checkout "${origin_default}"
+
+      - name: Protect default branch (PR review, linear history)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = process.env.OWNER;
+            const repo = process.env.REPO;
+            const branch = "${{ steps.def.outputs.branch }}";
+            try {
+              await github.request('PUT /repos/{owner}/{repo}/branches/{branch}/protection', {
+                owner, repo, branch,
+                required_status_checks: { strict: true, contexts: [] },
+                enforce_admins: true,
+                required_pull_request_reviews: {
+                  required_approving_review_count: 1,
+                  dismiss_stale_reviews: true,
+                  require_code_owner_reviews: false
+                },
+                restrictions: null,
+                required_linear_history: true,
+                allow_force_pushes: false,
+                allow_deletions: false,
+                required_conversation_resolution: true
+              });
+              core.info(`Branch protection applied to ${branch}`);
+            } catch (e) {
+              core.warning(`Failed to set branch protection: ${e.message}`);
+            }
+
+      - name: Ensure environments (dev, staging, production)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = process.env.OWNER;
+            const repo = process.env.REPO;
+            for (const env of ['dev','staging','production']) {
+              try {
+                await github.request('PUT /repos/{owner}/{repo}/environments/{environment_name}', {
+                  owner, repo, environment_name: env
+                });
+                core.info(`Ensured environment: ${env}`);
+              } catch (e) {
+                core.warning(`Failed ensuring environment ${env}: ${e.message}`);
+              }
+            }
+
+      - name: Set repository secrets
+        env:
+          CF_ACCOUNT_ID: ${{ inputs.cf_account_id }}
+          CF_API_TOKEN: ${{ inputs.cf_api_token }}
+          CF_PAGES_PROJECT: ${{ inputs.cf_pages_project }}
+          CF_WORKERS_SCRIPT: ${{ inputs.cf_workers_script }}
+          CF_WORKER_CRON_SECRET: ${{ inputs.cf_worker_cron_secret }}
+          SUPABASE_ACCESS_TOKEN: ${{ inputs.supabase_access_token }}
+          SUPABASE_PROJECT_REF: ${{ inputs.supabase_project_ref }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ inputs.supabase_service_role_key }}
+          VITE_SUPABASE_URL: ${{ inputs.vite_supabase_url }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ inputs.vite_supabase_publishable_key }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ inputs.vite_stripe_publishable_key }}
+          VITE_SITE_URL: ${{ inputs.vite_site_url }}
+        run: |
+          set -euo pipefail
+          # Use gh with GH_TOKEN
+          export GH_TOKEN="$GH_TOKEN"
+          gh secret set VITE_SUPABASE_URL             --body "$VITE_SUPABASE_URL"             -R "$OWNER/$REPO"
+          gh secret set VITE_SUPABASE_PUBLISHABLE_KEY --body "$VITE_SUPABASE_PUBLISHABLE_KEY" -R "$OWNER/$REPO"
+          gh secret set VITE_STRIPE_PUBLISHABLE_KEY   --body "$VITE_STRIPE_PUBLISHABLE_KEY"   -R "$OWNER/$REPO"
+          gh secret set VITE_SITE_URL                 --body "$VITE_SITE_URL"                 -R "$OWNER/$REPO"
+          gh secret set CF_ACCOUNT_ID                 --body "$CF_ACCOUNT_ID"                 -R "$OWNER/$REPO"
+          [ -n "$CF_API_TOKEN" ]        && gh secret set CF_API_TOKEN              --body "$CF_API_TOKEN"              -R "$OWNER/$REPO"
+          [ -n "$CF_PAGES_PROJECT" ]    && gh secret set CF_PAGES_PROJECT          --body "$CF_PAGES_PROJECT"          -R "$OWNER/$REPO"
+          [ -n "$CF_WORKERS_SCRIPT" ]   && gh secret set CF_WORKERS_SCRIPT         --body "$CF_WORKERS_SCRIPT"         -R "$OWNER/$REPO"
+          [ -n "$CF_WORKER_CRON_SECRET" ] && gh secret set CF_WORKER_CRON_SECRET  --body "$CF_WORKER_CRON_SECRET"     -R "$OWNER/$REPO"
+          gh secret set SUPABASE_ACCESS_TOKEN         --body "$SUPABASE_ACCESS_TOKEN"         -R "$OWNER/$REPO"
+          gh secret set SUPABASE_PROJECT_REF          --body "$SUPABASE_PROJECT_REF"          -R "$OWNER/$REPO"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && gh secret set SUPABASE_SERVICE_ROLE_KEY --body "$SUPABASE_SERVICE_ROLE_KEY" -R "$OWNER/$REPO"
+
+      - name: Set environment secrets (dev)
+        env:
+          CF_ACCOUNT_ID: ${{ inputs.cf_account_id }}
+          CF_API_TOKEN: ${{ inputs.cf_api_token }}
+          CF_PAGES_PROJECT: ${{ inputs.cf_pages_project }}
+          CF_WORKERS_SCRIPT: ${{ inputs.cf_workers_script }}
+          CF_WORKER_CRON_SECRET: ${{ inputs.cf_worker_cron_secret }}
+          SUPABASE_ACCESS_TOKEN: ${{ inputs.supabase_access_token }}
+          SUPABASE_PROJECT_REF: ${{ inputs.supabase_project_ref }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ inputs.supabase_service_role_key }}
+          VITE_SUPABASE_URL: ${{ inputs.vite_supabase_url }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ inputs.vite_supabase_publishable_key }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ inputs.vite_stripe_publishable_key }}
+          VITE_SITE_URL: ${{ inputs.vite_site_url }}
+        run: |
+          set -euo pipefail
+          export GH_TOKEN="$GH_TOKEN"
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY VITE_STRIPE_PUBLISHABLE_KEY VITE_SITE_URL \
+                      CF_ACCOUNT_ID CF_API_TOKEN CF_PAGES_PROJECT CF_WORKERS_SCRIPT CF_WORKER_CRON_SECRET \
+                      SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_SERVICE_ROLE_KEY; do
+            val="$(eval echo \${$name-})"
+            [ -n "$val" ] && gh secret set "$name" --env dev --body "$val" -R "$OWNER/$REPO" || true
+          done
+
+      - name: Summary
+        run: |
+          echo "AI-freedom bootstrap completed."
+          echo "- Branches: ${{ steps.def.outputs.branch }} (protected), dev, ai/bootstrap"
+          echo "- Environments: dev/staging/production ensured"
+          echo "- Secrets set at repo-level and env=dev (if provided)"
+

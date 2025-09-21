@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-09-16T22:00:15.800Z",
+  "summary": {
+    "totalIssues": 14,
+    "performanceIssues": 0,
+    "securityConcerns": 0,
+    "recommendations": 1
+  },
+  "issues": [
+    "⚠️ Activities table is empty - users may not be uploading activities",
+    "⚠️ Player bases table is empty - games may not be functioning properly",
+    "⚠️ Territory ownership table is empty - territory system may not be working",
+    "❌ get_user_leagues: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ create_league_with_owner: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ join_league: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ manage_league_membership: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ create_game: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ get_active_game_for_league: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ set_player_base: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ finish_due_games: Function missing or broken - supabase.rpc(...).catch is not a function",
+    "❌ 8 critical functions have issues",
+    "⚠️ High number of migrations (105) suggests many iterations/fixes",
+    "⚠️ Many recent fix migrations (4/10) suggests ongoing stability issues"
+  ],
+  "performance": [],
+  "security": [],
+  "recommendations": [
+    "🔧 Consider consolidating migrations in next major version"
+  ],
+  "overallHealth": "🔴 POOR"
+}

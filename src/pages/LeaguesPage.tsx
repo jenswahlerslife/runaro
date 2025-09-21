@@ -12,8 +12,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Plus, Users, Trophy, Key, Crown, Clock, Play, Bell } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import LeagueDirectory from '@/components/leagues/LeagueDirectory';
-import { createLeague, joinLeague, getUserLeagues, getLeagueGames, createGame, startGame, type League, type Game } from '@/lib/leagues';
+import { createLeague, joinLeague, getUserLeagues, type League } from '@/lib/leagues';
+import { rpcGetActiveGameForLeague } from '@/lib/gamesApi';
 import AdminRequestPanel from '@/components/leagues/AdminRequestPanel';
+import GameManagement from '@/components/leagues/GameManagement';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function LeaguesPage() {
@@ -26,13 +28,13 @@ export default function LeaguesPage() {
   const [requestPanelOpen, setRequestPanelOpen] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [selectedLeagueName, setSelectedLeagueName] = useState<string>('');
-  const [games, setGames] = useState<Game[]>([]);
+  const [activeGames, setActiveGames] = useState<Record<string, any>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Filter admin leagues based on is_admin property from the RPC
-  const adminLeagues = leagues.filter(league => league.is_admin);
+  const adminLeagues = (leagues ?? []).filter(league => league.is_admin);
 
   const [newLeague, setNewLeague] = useState({
     name: '',
@@ -42,12 +44,31 @@ export default function LeaguesPage() {
   });
 
   const [inviteCode, setInviteCode] = useState('');
-  const [newGameName, setNewGameName] = useState('');
+
+  const fetchActiveGames = useCallback(async (leagues: League[]) => {
+    const games: Record<string, any> = {};
+
+    for (const league of leagues) {
+      try {
+        const activeGame = await rpcGetActiveGameForLeague(league.id);
+        if (activeGame && (activeGame as any).id) {
+          games[league.id] = activeGame;
+        }
+      } catch (error) {
+        console.error(`Error fetching active game for league ${league.id}:`, error);
+      }
+    }
+
+    setActiveGames(games);
+  }, []);
 
   const fetchLeagues = useCallback(async () => {
     try {
       const userLeagues = await getUserLeagues();
-      setLeagues(userLeagues);
+      setLeagues(userLeagues || []);
+
+      // Also fetch active games for each league
+      await fetchActiveGames(userLeagues || []);
     } catch (error) {
       console.error('Error fetching leagues:', error);
       toast({
@@ -58,32 +79,20 @@ export default function LeaguesPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, fetchActiveGames]);
 
 
 
-  const fetchLeagueGames = async (leagueId: string) => {
-    try {
-      const leagueGames = await getLeagueGames(leagueId);
-      setGames(leagueGames);
-    } catch (error) {
-      console.error('Error fetching games:', error);
-      toast({
-        title: "Error loading games",
-        description: String(error),
-        variant: "destructive",
-      });
-    }
-  };
+
 
   // Get total pending requests count for all admin leagues
   const { data: totalPendingCount = 0 } = useQuery({
     queryKey: ['admin-pending-count'],
     queryFn: async () => {
-      if (adminLeagues.length === 0) return 0;
+      if ((adminLeagues ?? []).length === 0) return 0;
       
       let totalCount = 0;
-      for (const league of adminLeagues) {
+      for (const league of (adminLeagues ?? [])) {
         const { data, error } = await supabase.rpc('get_admin_pending_requests_count', {
           league_id: league.id
         });
@@ -93,7 +102,7 @@ export default function LeaguesPage() {
       }
       return totalCount;
     },
-    enabled: adminLeagues.length > 0,
+    enabled: (adminLeagues ?? []).length > 0,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
@@ -103,6 +112,7 @@ export default function LeaguesPage() {
       fetchLeagues();
     }
   }, [authLoading, user, fetchLeagues]);
+
 
   // Early returns after all hooks are defined
   if (authLoading) {
@@ -191,73 +201,30 @@ export default function LeaguesPage() {
     }
   };
 
-  const handleCreateGame = async () => {
-    if (!newGameName.trim()) {
-      toast({
-        title: "Spilnavn påkrævet",
-        description: "Indtast venligst et navn til spillet",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    try {
-      const result = await createGame(selectedLeagueId, newGameName);
-
-      if (result.success) {
-        toast({
-          title: "Spil oprettet!",
-          description: `${result.game_name} med ${result.member_count} potentielle spillere`,
-        });
-        setGameDialogOpen(false);
-        setNewGameName('');
-        fetchLeagueGames(selectedLeagueId);
-      } else {
-        toast({
-          title: "Fejl ved oprettelse af spil",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Fejl ved oprettelse af spil",
-        description: String(error),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleStartGame = async (gameId: string) => {
-    try {
-      const result = await startGame(gameId);
-
-      if (result.success) {
-        toast({
-          title: "Spil startet!",
-          description: `30-dages konkurrence med ${result.base_count} spillere`,
-        });
-        fetchLeagueGames(selectedLeagueId);
-      } else {
-        toast({
-          title: "Fejl ved start af spil",
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Fejl ved start af spil",
-        description: String(error),
-        variant: "destructive",
-      });
-    }
-  };
 
   const openGameDialog = (leagueId: string) => {
     setSelectedLeagueId(leagueId);
-    fetchLeagueGames(leagueId);
     setGameDialogOpen(true);
+  };
+
+  const handleGameButtonClick = (league: League) => {
+    const activeGame = activeGames[league.id];
+
+    if (activeGame) {
+      // Navigate to existing game
+      const gameId = activeGame.id;
+      const gameStatus = activeGame.status || 'setup';
+
+      const path = gameStatus === 'setup'
+        ? `/activities?game=${gameId}&selectBase=1`
+        : `/games/${gameId}`;
+
+      navigate(path);
+    } else {
+      // No game exists, open create dialog
+      openGameDialog(league.id);
+    }
   };
 
   const openRequestPanel = (leagueId: string, leagueName: string) => {
@@ -268,7 +235,7 @@ export default function LeaguesPage() {
 
   const openRequestPanelForAll = () => {
     // For multi-league admin panel, use first admin league as primary
-    if (adminLeagues.length > 0) {
+    if ((adminLeagues ?? []).length > 0) {
       setSelectedLeagueId(adminLeagues[0].id);
       setSelectedLeagueName('Alle ligaer');
       setRequestPanelOpen(true);
@@ -423,7 +390,7 @@ export default function LeaguesPage() {
 
 
         {/* Leagues Grid */}
-        {leagues.length === 0 ? (
+        {(leagues ?? []).length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
               <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -445,7 +412,7 @@ export default function LeaguesPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {leagues.map((league) => (
+            {(leagues ?? []).map((league) => (
               <Card key={league.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -457,12 +424,12 @@ export default function LeaguesPage() {
                           <button
                             onClick={() => navigate(`/leagues/${league.id}/members`)}
                             className="relative inline-flex items-center justify-center p-1 rounded hover:bg-blue-50 transition-colors"
-                            title={`Admin panel ${league.pending_requests_count ? `- ${league.pending_requests_count} pending requests` : ''}`}
+                            title={`Admin panel ${(league?.pending_requests_count ?? 0) > 0 ? `- ${league.pending_requests_count} pending requests` : ''}`}
                           >
                             <Crown className="h-4 w-4 text-blue-600" />
-                            {league.pending_requests_count && league.pending_requests_count > 0 && (
+                            {(league?.pending_requests_count ?? 0) > 0 && (
                               <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-                                {league.pending_requests_count > 9 ? '9+' : league.pending_requests_count}
+                                {(league?.pending_requests_count ?? 0) > 9 ? '9+' : league?.pending_requests_count ?? 0}
                               </span>
                             )}
                           </button>
@@ -482,7 +449,7 @@ export default function LeaguesPage() {
                         Members
                       </span>
                       <span className="font-medium">
-                        {league.member_count} / {league.max_members}
+                        {league?.member_count ?? 0} / {league?.max_members ?? 0}
                       </span>
                     </div>
                     
@@ -501,28 +468,65 @@ export default function LeaguesPage() {
                     </div>
 
                     <div className="flex gap-2 pt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => navigate(`/leagues/${league.id}/members`)}
                         className="flex-1 relative"
                       >
                         <Users className="h-4 w-4 mr-1" />
                         Members
-                        {league.is_admin && league.pending_requests_count && league.pending_requests_count > 0 && (
+                        {league?.is_admin && (league?.pending_requests_count ?? 0) > 0 && (
                           <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                            {league.pending_requests_count > 9 ? '9+' : league.pending_requests_count}
+                            {(league?.pending_requests_count ?? 0) > 9 ? '9+' : league?.pending_requests_count ?? 0}
                           </span>
                         )}
                       </Button>
-                      {league.is_admin && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => openGameDialog(league.id)}
+
+                      {/* Show Start Game CTA for all members when setup game exists */}
+                      {activeGames[league.id] && (activeGames[league.id] as any)?.status === 'setup' ? (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const game = activeGames[league.id] as any;
+                            navigate(`/activities?game=${game.id}&selectBase=1`);
+                          }}
                           className="flex-1"
                         >
                           <Play className="h-4 w-4 mr-1" />
-                          Games
+                          Start Game
+                        </Button>
+                      ) : league.is_admin ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleGameButtonClick(league)}
+                          className="flex-1"
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          {activeGames[league.id] ? 'Gå til spillet' : 'Games'}
+                        </Button>
+                      ) : activeGames[league.id] ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const game = activeGames[league.id] as any;
+                            navigate(`/games/${game.id}`);
+                          }}
+                          className="flex-1"
+                        >
+                          <Trophy className="h-4 w-4 mr-1" />
+                          Vis Spil
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          className="flex-1"
+                        >
+                          <Clock className="h-4 w-4 mr-1" />
+                          Afventer spil
                         </Button>
                       )}
                     </div>
@@ -538,87 +542,21 @@ export default function LeaguesPage() {
           <LeagueDirectory />
         </div>
 
-        {/* Games Dialog */}
-        <Dialog open={gameDialogOpen} onOpenChange={setGameDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>League Games</DialogTitle>
-              <DialogDescription>
-                Manage games for this league
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newGameName}
-                  onChange={(e) => setNewGameName(e.target.value)}
-                  placeholder="Enter game name"
-                  className="flex-1"
-                />
-                <Button onClick={handleCreateGame}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Game
-                </Button>
-              </div>
-
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {games.map((game) => (
-                  <Card key={game.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{game.name}</h4>
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Badge variant={
-                              game.status === 'active' ? 'default' :
-                              game.status === 'setup' ? 'secondary' : 'outline'
-                            }>
-                              {game.status}
-                            </Badge>
-                            {game.status === 'active' && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Ends: {new Date(game.end_date!).toLocaleDateString()}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {game.bases_set} bases set
-                          </span>
-                          {game.status === 'setup' && game.bases_set && game.bases_set >= 2 && (
-                            <Button size="sm" onClick={() => handleStartGame(game.id)}>
-                              <Play className="h-4 w-4 mr-1" />
-                              Start
-                            </Button>
-                          )}
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => navigate(`/games/${game.id}`)}
-                          >
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {games.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No games created yet
-                  </p>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setGameDialogOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Games Dialog - Direct Create Mode */}
+        {selectedLeagueId && (
+          <GameManagement
+            leagueId={selectedLeagueId}
+            isAdmin={leagues.find(l => l.id === selectedLeagueId)?.is_admin || false}
+            autoOpenCreate
+            open={gameDialogOpen}
+            onOpenChange={(open) => {
+              setGameDialogOpen(open);
+              if (!open) {
+                setSelectedLeagueId('');
+              }
+            }}
+          />
+        )}
 
         {/* Admin Request Panel */}
         <AdminRequestPanel 

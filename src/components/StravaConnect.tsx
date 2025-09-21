@@ -10,14 +10,15 @@ const REDIRECT_URI = 'https://runaro.dk/auth/strava/callback'; // Server-side re
 
 interface StravaConnectProps {
   onConnected?: () => void;
+  returnUrl?: string;
 }
 
-const StravaConnect = ({ onConnected }: StravaConnectProps) => {
+const StravaConnect = ({ onConnected, returnUrl: propReturnUrl }: StravaConnectProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const toBase64Url = (obj: any) => {
+  const toBase64Url = (obj: Record<string, unknown>) => {
     const json = JSON.stringify(obj);
     return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   };
@@ -33,11 +34,23 @@ const StravaConnect = ({ onConnected }: StravaConnectProps) => {
     }
 
     setIsConnecting(true);
-    
+
     const origin = window.location.origin;
-    const returnUrl = origin.includes('localhost')
-      ? `${origin}/strava/success`
-      : 'https://runaro.dk/strava/success';
+
+    // Use prop returnUrl if provided, otherwise fallback to query params or default
+    let returnUrl = propReturnUrl || `${origin}/strava/success`;
+
+    if (!propReturnUrl) {
+      // Read gameId from query parameters as fallback
+      const params = new URLSearchParams(window.location.search);
+      const gameId = params.get("gameId");
+
+      if (gameId) {
+        returnUrl = import.meta.env.PROD
+          ? `https://runaro.dk/activities?game=${gameId}&selectBase=1`
+          : `${origin}/activities?game=${gameId}&selectBase=1`;
+      }
+    }
 
     const statePayload = {
       userId: user.id,
