@@ -301,7 +301,11 @@ Deno.serve(async (req) => {
     if (insertError) {
       console.error('Database insert failed:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to save activity to database' }),
+        JSON.stringify({
+          error: 'Failed to save activity to database',
+          details: insertError.message,
+          code: insertError.code
+        }),
         { status: 500, headers }
       );
     }
