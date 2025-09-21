@@ -101,9 +101,29 @@ function polylineToPostGISGeometry(polylineString: string): string | null {
 
 Deno.serve(async (req) => {
   const headers = cors(req.headers.get('Origin'));
-  if (req.method === 'OPTIONS') return new Response(null, { headers });
+
+  // Handle OPTIONS request immediately for CORS preflight
+  if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight request handled');
+    return new Response(null, {
+      status: 200,
+      headers: {
+        ...headers,
+        'Access-Control-Max-Age': '86400' // Cache preflight for 24 hours
+      }
+    });
+  }
 
   try {
+    console.log('🚀 transfer-activity function started');
+    console.log('📋 Request method:', req.method);
+    console.log('📋 Origin:', req.headers.get('Origin'));
+
+    // Only log headers for non-OPTIONS requests to avoid noise
+    if (req.method !== 'OPTIONS') {
+      console.log('📋 Request headers:', Object.fromEntries(req.headers.entries()));
+    }
+
     // Get environment variables - fail if not set properly
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -111,23 +131,31 @@ Deno.serve(async (req) => {
     const STRAVA_CLIENT_ID = Deno.env.get('STRAVA_CLIENT_ID');
     const STRAVA_CLIENT_SECRET = Deno.env.get('STRAVA_CLIENT_SECRET');
 
+    console.log('🔑 Environment variables check:', {
+      SUPABASE_URL: !!SUPABASE_URL,
+      SERVICE_ROLE: !!SERVICE_ROLE,
+      ANON_KEY: !!ANON_KEY,
+      STRAVA_CLIENT_ID: !!STRAVA_CLIENT_ID,
+      STRAVA_CLIENT_SECRET: !!STRAVA_CLIENT_SECRET
+    });
+
     // Validate required environment variables
     if (!SUPABASE_URL || !SERVICE_ROLE || !ANON_KEY || !STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
-      console.error('Missing required environment variables:', {
-        SUPABASE_URL: !!SUPABASE_URL,
-        SERVICE_ROLE: !!SERVICE_ROLE,
-        ANON_KEY: !!ANON_KEY,
-        STRAVA_CLIENT_ID: !!STRAVA_CLIENT_ID,
-        STRAVA_CLIENT_SECRET: !!STRAVA_CLIENT_SECRET
-      });
+      console.error('❌ Missing required environment variables');
       return new Response(JSON.stringify({ error: 'Function configuration error' }), { status: 500, headers });
     }
 
     // Get user from JWT
-    const jwt = req.headers.get('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.headers.get('Authorization');
+    console.log('🔐 Auth header present:', !!authHeader);
+
+    const jwt = authHeader?.replace('Bearer ', '');
     if (!jwt) {
+      console.log('❌ No JWT token found in Authorization header');
       return new Response(JSON.stringify({ error: 'Authorization required' }), { status: 401, headers });
     }
+
+    console.log('✅ JWT token found, length:', jwt.length);
 
     // Create clients
     const supabaseSrv = createClient(SUPABASE_URL, SERVICE_ROLE);
@@ -279,7 +307,23 @@ Deno.serve(async (req) => {
       included_in_game: false, // Align with DB default to avoid drift
     };
 
+    // Check if activity already exists
+    console.log('🔍 Checking if activity already exists for user:', profileId, 'strava_activity_id:', activityId);
+    const { data: existingActivity, error: checkError } = await supabaseSrv
+      .from('user_activities')
+      .select('id, name, included_in_game, is_base')
+      .eq('user_id', profileId)
+      .eq('strava_activity_id', activityId)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('❌ Error checking existing activity:', checkError);
+    } else if (existingActivity) {
+      console.log('✅ Activity already exists:', existingActivity);
+    }
+
     // Insert activity via RPC to avoid raw SQL in runtime
+    console.log('💾 Inserting/updating activity with upsert function...');
     const { error: insertError } = await supabaseSrv.rpc('insert_user_activity_with_route', {
       p_user_id: profileId,
       p_strava_activity_id: activityId,
@@ -299,16 +343,22 @@ Deno.serve(async (req) => {
     });
 
     if (insertError) {
-      console.error('Database insert failed:', insertError);
+      console.error('❌ Database insert/upsert failed:', insertError);
+      console.error('   Error code:', insertError.code);
+      console.error('   Error details:', insertError.details);
+      console.error('   Error hint:', insertError.hint);
       return new Response(
         JSON.stringify({
           error: 'Failed to save activity to database',
           details: insertError.message,
-          code: insertError.code
+          code: insertError.code,
+          hint: insertError.hint
         }),
-        { status: 500, headers }
+        { status: 400, headers } // Changed from 500 to 400 to match user's error
       );
     }
+
+    console.log('✅ Activity successfully inserted/updated');
 
     // Update user's total points - try RPC function
     try {
