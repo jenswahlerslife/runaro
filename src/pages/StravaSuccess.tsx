@@ -71,8 +71,12 @@ const StravaSuccess = () => {
         description: `"${activity.name}" er nu tilføjet til spillet. Sender dig til kortet...`,
       });
 
-      // Remove transferred activity from list
-      setActivities(prev => prev.filter(a => a.id !== activity.id));
+      // Mark activity as used but keep it in the list for reuse
+      setActivities(prev => prev.map(a =>
+        a.id === activity.id
+          ? { ...a, already_used: true }
+          : a
+      ));
 
       // Redirect to map page to see the territory with activity ID and animation
       setTimeout(() => {
@@ -174,7 +178,11 @@ const StravaSuccess = () => {
                   <Button
                     onClick={() => handleTransferActivity(activity)}
                     disabled={transferring === activity.id}
-                    className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className={`w-full h-12 font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl ${
+                      activity.already_used
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                        : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                    }`}
                   >
                     {transferring === activity.id ? (
                       <div className="flex items-center gap-2">
@@ -184,7 +192,9 @@ const StravaSuccess = () => {
                     ) : (
                       <div className="flex items-center gap-2">
                         <Upload className="w-4 h-4" />
-                        <span>Overfør til spillet</span>
+                        <span>
+                          {activity.already_used ? 'Overfør til ny liga' : 'Overfør til spillet'}
+                        </span>
                         <ArrowRight className="w-4 h-4" />
                       </div>
                     )}

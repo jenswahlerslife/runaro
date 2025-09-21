@@ -166,17 +166,20 @@ Deno.serve(async (req) => {
       console.log('user_activities table not found, showing all activities');
     }
 
-    // Filter out already transferred activities
-    const availableActivities = runningActivities.filter((activity: any) =>
-      !transferredActivityIds.includes(activity.id)
-    );
+    // Add 'already_used' flag to activities instead of filtering them out
+    // This allows users to reuse activities across multiple leagues
+    const availableActivities = runningActivities.map((activity: any) => ({
+      ...activity,
+      already_used: transferredActivityIds.includes(activity.id)
+    }));
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       activities: availableActivities,
       count: availableActivities.length,
       totalActivities: runningActivities.length,
-      transferred: transferredActivityIds.length
+      transferred: transferredActivityIds.length,
+      reusable: true // Flag to indicate activities can be reused
     }), { headers });
 
   } catch (error: any) {
