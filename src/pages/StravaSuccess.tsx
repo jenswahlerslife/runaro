@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MapPin, Clock, Zap, ArrowRight, Upload } from 'lucide-react';
 
 import type { StravaActivity } from '@/types/strava';
+import { formatDistance, formatTime, formatSpeed } from '@/utils/format';
 
 const StravaSuccess = () => {
   const navigate = useNavigate();
@@ -51,9 +52,6 @@ const StravaSuccess = () => {
 
     fetchRecentActivities();
   }, [user, toast]);
-
-  // Formatting helpers moved to shared util for reuse and testing
-  import { formatDistance, formatTime, formatSpeed } from '@/utils/format';
 
   const handleTransferActivity = async (activity: StravaActivity) => {
     setTransferring(activity.id);
