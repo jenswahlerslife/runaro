@@ -177,12 +177,12 @@ const Map: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const fetchTerritories = async () => {
+    const fetchTerritories = async (retryCount = 0) => {
       if (!user || !isClient) return;
-      
+
       setLoading(true);
       try {
-        console.log('[Map] Fetching activities for user:', user.id);
+        console.log('[Map] Fetching activities for user:', user.id, `(attempt ${retryCount + 1})`);
 
         // First get the user's profile ID (user_activities FK references profiles.id)
         const { data: profile, error: profileError } = await supabase
@@ -231,7 +231,7 @@ const Map: React.FC = () => {
             has_polyline: !!activity.polyline,
             polyline_length: activity.polyline?.length || 0
           });
-          
+
           const territory = createTerritoryFromActivity(activity);
           if (territory) {
             territoryList.push(territory);
@@ -243,14 +243,26 @@ const Map: React.FC = () => {
 
         setTerritories(territoryList);
         console.log(`[Map] Final result: ${territoryList.length} territories ready for rendering`);
-        
-        if (territoryList.length === 0) {
+
+        // If we're looking for a specific activity that hasn't appeared yet, retry
+        if (focusActivityId && retryCount < 3) {
+          const foundActivity = territoryList.find(t => t.stravaActivityId === focusActivityId);
+          if (!foundActivity) {
+            console.log(`[Map] Focus activity ${focusActivityId} not found, retrying in 2 seconds...`);
+            setTimeout(() => fetchTerritories(retryCount + 1), 2000);
+            return;
+          } else {
+            console.log(`[Map] Found focus activity:`, foundActivity.name);
+          }
+        }
+
+        if (territoryList.length === 0 && retryCount === 0) {
           console.warn('[Map] No territories created! Check if activities have valid polylines.');
         }
       } catch (error) {
         console.error('[Map] Error loading territories:', error);
         toast({
-          title: "Error", 
+          title: "Error",
           description: "Failed to load territories",
           variant: "destructive"
         });
@@ -260,7 +272,7 @@ const Map: React.FC = () => {
     };
 
     fetchTerritories();
-  }, [user, isClient, toast]);
+  }, [user, isClient, toast, focusActivityId]);
 
   const handleMapReady = (map: LeafletMap) => {
     mapRef.current = map;
@@ -438,15 +450,18 @@ const Map: React.FC = () => {
         </MapContainer>
 
         {/* No territories message */}
-        {territories.length === 0 && (
+        {territories.length === 0 && !loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center max-w-sm mx-4">
               <Navigation className="w-12 h-12 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                No territories yet
+                {focusActivityId ? "Indlæser territorium..." : "Ingen territorier endnu"}
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Connect your Strava account and upload your running routes to see them as territories on this map.
+                {focusActivityId
+                  ? "Vent venligst mens dit nye territorium indlæses. Dette kan tage et øjeblik."
+                  : "Tilslut din Strava-konto og overfør dine løberuter for at se dem som territorier på kortet."
+                }
               </p>
             </div>
           </div>
