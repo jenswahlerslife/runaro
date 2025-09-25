@@ -33,9 +33,11 @@ export interface League {
 export interface ActiveGame {
   id: string;
   name: string;
-  status: "setup" | "active";
+  status: "setup" | "active" | "finished";
   end_at: string | null;
   time_left_seconds: number | null;
+  finished_at?: string | null;
+  winner_user_id?: string | null;
 }
 
 export type UserRole = 'owner' | 'admin' | 'member';

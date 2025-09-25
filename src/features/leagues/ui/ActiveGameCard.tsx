@@ -19,10 +19,11 @@ export function ActiveGameCard({
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Trophy className="h-5 w-5" />
-          Spil i gang
+          {activeGame.status === "finished" ? "Spil afsluttet" : "Spil i gang"}
         </CardTitle>
         <div className="text-sm text-muted-foreground">
-          {activeGame.status === "setup" ? "Venter på baser" : "Live"}
+          {activeGame.status === "setup" ? "Venter på baser" :
+           activeGame.status === "finished" ? "Afsluttet" : "Live"}
         </div>
       </CardHeader>
       <CardContent>
@@ -32,8 +33,12 @@ export function ActiveGameCard({
             <div className="font-semibold">{activeGame.name}</div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Tid tilbage</div>
-            <div className="font-semibold">{timeLeftLabel}</div>
+            <div className="text-sm text-muted-foreground">
+              {activeGame.status === "finished" ? "Status" : "Tid tilbage"}
+            </div>
+            <div className="font-semibold">
+              {activeGame.status === "finished" ? "Færdig" : timeLeftLabel}
+            </div>
           </div>
           <div className="md:text-right">
             <Button
@@ -41,7 +46,8 @@ export function ActiveGameCard({
               onClick={onNavigateToGame}
             >
               <Play className="h-4 w-4 mr-2" />
-              {activeGame.status === "setup" ? "Start game" : "Gå til spillet"}
+              {activeGame.status === "setup" ? "Start game" :
+               activeGame.status === "finished" ? "Se resultat" : "Gå til spillet"}
             </Button>
           </div>
         </div>

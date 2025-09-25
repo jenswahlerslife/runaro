@@ -109,13 +109,19 @@ export async function rpcGetActiveGameForLeague(leagueId: string) {
   const { data, error } = await supabase.rpc("get_active_game_for_league", { p_league_id: leagueId });
   if (error) throw error;
   if ((data as any)?.error) throw new Error((data as any).error);
-  return data as {
-    id: string | null;
-    name: string | null;
-    status: "setup" | "active" | null;
+
+  // The RPC returns: { game: { id, name, status, ... } } | { game: null }
+  const game = (data as any)?.game ?? null;
+
+  return game as null | {
+    id: string;
+    name: string;
+    status: "setup" | "active" | "finished";
     start_date: string | null;
     duration_days: number | null;
     end_at: string | null;
     time_left_seconds: number | null;
-  } | { game: null };
+    finished_at?: string | null;
+    winner_user_id?: string | null;
+  };
 }

@@ -38,7 +38,8 @@
       "Bash(del deploy-via-api.js)",
       "WebFetch(domain:runaro.dk)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(del test_rls_fix.cjs)"
     ],
     "deny": [],
     "ask": []

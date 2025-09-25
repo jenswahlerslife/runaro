@@ -24,14 +24,16 @@ export function useActiveGame(leagueId: string): UseActiveGameReturn {
       try {
         setLoading(true);
         const g = await rpcGetActiveGameForLeague(leagueId);
-        if (!cancelled && g && (g as any).id) {
+        if (!cancelled && g && g.id) {
           setActiveGame({
-            id: (g as any).id!,
-            name: (g as any).name ?? "Game",
-            status: (g as any).status ?? "active",
-            end_at: (g as any).end_at ?? null,
-            time_left_seconds: (g as any).time_left_seconds ?? null,
+            id: g.id,
+            name: g.name ?? "Game",
+            status: g.status ?? "active",
+            end_at: g.end_at ?? null,
+            time_left_seconds: g.time_left_seconds ?? null,
           });
+        } else if (!cancelled) {
+          setActiveGame(null);
         }
       } catch (e) {
         console.error("Failed to load active game:", e);
