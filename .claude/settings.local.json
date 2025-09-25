@@ -39,7 +39,8 @@
       "WebFetch(domain:runaro.dk)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(del test_rls_fix.cjs)"
+      "Bash(del test_rls_fix.cjs)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
