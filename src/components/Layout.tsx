@@ -1,9 +1,8 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, Crown } from 'lucide-react';
+import { LogOut, Crown, Users, Gamepad2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import MyGamesMenu from '@/components/MyGamesMenu';
 
 interface LayoutProps {
   children: ReactNode;
@@ -36,7 +35,24 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Right aligned navigation + actions */}
           <div className="justify-self-start flex items-center gap-4">
             <nav className="hidden md:flex items-center gap-4">
-              <MyGamesMenu variant="desktop" />
+              <Link to="/my-games">
+                <Button
+                  variant={isActive('/my-games') ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <Gamepad2 className="h-4 w-4 mr-2" />
+                  Dine spil
+                </Button>
+              </Link>
+              <Link to="/leagues">
+                <Button
+                  variant={isActive('/leagues') ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Ligaer
+                </Button>
+              </Link>
               <Link to="/subscription">
                 <Button
                   variant={isActive('/subscription') ? 'default' : 'ghost'}
@@ -68,7 +84,26 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Mobile navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border">
         <div className="flex justify-around py-2">
-          <MyGamesMenu variant="mobile" />
+          <Link to="/my-games">
+            <Button
+              variant={isActive('/my-games') ? 'default' : 'ghost'}
+              size="sm"
+              className="flex flex-col items-center h-12"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              <span className="text-xs mt-1">Dine spil</span>
+            </Button>
+          </Link>
+          <Link to="/leagues">
+            <Button
+              variant={isActive('/leagues') ? 'default' : 'ghost'}
+              size="sm"
+              className="flex flex-col items-center h-12"
+            >
+              <Users className="h-4 w-4" />
+              <span className="text-xs mt-1">Ligaer</span>
+            </Button>
+          </Link>
           <Link to="/subscription">
             <Button
               variant={isActive('/subscription') ? 'default' : 'ghost'}

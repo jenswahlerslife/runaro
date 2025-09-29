@@ -27,6 +27,7 @@ import Subscription from "./pages/Subscription";
 import GameSetup from "./pages/GameSetup";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AuthDebugPage from "./pages/AuthDebugPage";
+import MyGamesPage from "./pages/MyGamesPage";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/map" element={<MapPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/activities" element={<ActivitiesPage />} />
+            <Route path="/my-games" element={<MyGamesPage />} />
             <Route path="/leagues" element={<LeaguesPage />} />
             <Route path="/leagues/:leagueId/members" element={<LeagueMembers />} />
             <Route path="/subscription" element={<Subscription />} />
