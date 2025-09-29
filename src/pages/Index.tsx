@@ -2,8 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Map, Upload, Trophy, Activity, Play, Gamepad2 } from 'lucide-react';
+import { Play, Gamepad2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UIProfileSelect } from '@/types/ui';
@@ -125,76 +124,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center">
-              <Map className="h-8 w-8 mx-auto text-primary" />
-              <CardTitle>Kort</CardTitle>
-              <CardDescription>
-                Udforsk dit område med beskyttelse af privatliv
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link to="/map">
-                  Åbn Kort
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center">
-              <Upload className="h-8 w-8 mx-auto text-primary" />
-              <CardTitle>Upload</CardTitle>
-              <CardDescription>
-                Del dit indhold og filer
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/upload">
-                  Upload Filer
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center">
-              <Trophy className="h-8 w-8 mx-auto text-primary" />
-              <CardTitle>Ligaer</CardTitle>
-              <CardDescription>
-                Deltag i konkurrencer og udfordringer
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/leagues">
-                  Se Ligaer
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center">
-              <Activity className="h-8 w-8 mx-auto text-primary" />
-              <CardTitle>Dashboard</CardTitle>
-              <CardDescription>
-                Se din aktivitet og statistikker
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/dashboard">
-                  Gå til Dashboard
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </Layout>
   );
