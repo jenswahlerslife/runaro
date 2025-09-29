@@ -152,7 +152,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading your territories...</p>
+          <p className="text-muted-foreground">Indlæser dine territorier...</p>
         </div>
       </div>
     );
@@ -162,11 +162,11 @@ const Dashboard = () => {
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Territory Dashboard</h1>
+          <h1 className="text-3xl font-bold">Territorium Dashboard</h1>
           <Link to="/upload">
             <Button>
               <Activity className="h-4 w-4 mr-2" />
-              Upload Activity
+              Upload Aktivitet
             </Button>
           </Link>
         </div>
@@ -175,7 +175,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Territory</CardTitle>
+            <CardTitle className="text-sm font-medium">Samlet Territorium</CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -183,14 +183,14 @@ const Dashboard = () => {
               {loadingTerr ? "…" : `${(terrTotals?.total_area_km2 ?? 0).toFixed(2)} km²`}
             </div>
             <p className="text-xs text-muted-foreground">
-              Across {loadingTerr ? "…" : terrTotals?.territories_count ?? 0} territories
+              På tværs af {loadingTerr ? "…" : terrTotals?.territories_count ?? 0} territorier
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Distance</CardTitle>
+            <CardTitle className="text-sm font-medium">Samlet Distance</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -198,14 +198,14 @@ const Dashboard = () => {
               {loadingTotals ? "…" : `${(totals?.total_distance_km ?? 0).toFixed(1)} km`}
             </div>
             <p className="text-xs text-muted-foreground">
-              Total distance covered
+              Samlet tilbagelagt distance
             </p>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => window.location.href = '/activities'}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Activities</CardTitle>
+            <CardTitle className="text-sm font-medium">Aktiviteter</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -213,20 +213,20 @@ const Dashboard = () => {
               {loadingTotals ? "…" : `${totals?.activities_count ?? 0}`}
             </div>
             <p className="text-xs text-muted-foreground">
-              Activities uploaded
+              Aktiviteter uploadet
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Leagues</CardTitle>
+            <CardTitle className="text-sm font-medium">Ligaer</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{leagues.length}</div>
             <p className="text-xs text-muted-foreground">
-              Active competitions
+              Aktive konkurrencer
             </p>
           </CardContent>
         </Card>
@@ -235,10 +235,10 @@ const Dashboard = () => {
       {/* Leagues */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Your Leagues</h2>
+          <h2 className="text-xl font-semibold">Dine Ligaer</h2>
           <Link to="/leagues">
             <Button variant="outline" size="sm">
-              Manage Leagues
+              Administrer Ligaer
             </Button>
           </Link>
         </div>
@@ -249,15 +249,15 @@ const Dashboard = () => {
               <div className="text-center space-y-4">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground" />
                 <div>
-                  <h3 className="font-medium">No leagues yet</h3>
+                  <h3 className="font-medium">Ingen ligaer endnu</h3>
                   <p className="text-sm text-muted-foreground">
-                    Create or join a league to start competing with friends
+                    Opret eller deltag i en liga for at begynde at konkurrere med venner
                   </p>
                 </div>
                 <Link to="/leagues">
                   <Button>
                     <Users className="h-4 w-4 mr-2" />
-                    Browse Leagues
+                    Gennemse Ligaer
                   </Button>
                 </Link>
               </div>
@@ -279,13 +279,13 @@ const Dashboard = () => {
                   <CardContent>
                     <div className="flex justify-between items-center">
                       <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Your territory</p>
+                        <p className="text-sm text-muted-foreground">Dit territorium</p>
                         <p className="text-lg font-semibold">
                           {leagueStats?.total_area.toFixed(2) || 0} km²
                         </p>
                       </div>
                       <div className="space-y-1 text-right">
-                        <p className="text-sm text-muted-foreground">Activities</p>
+                        <p className="text-sm text-muted-foreground">Aktiviteter</p>
                         <p className="text-lg font-semibold">
                           {leagueStats?.territory_count || 0}
                         </p>
@@ -305,15 +305,15 @@ const Dashboard = () => {
           <div className="text-center space-y-4">
             <Trophy className="h-12 w-12 mx-auto text-primary" />
             <div>
-              <h3 className="font-medium">Ready to claim more territory?</h3>
+              <h3 className="font-medium">Klar til at erobre mere territorium?</h3>
               <p className="text-sm text-muted-foreground">
-                Upload your latest run or walk to expand your conquered areas
+                Upload dit seneste løb eller gåtur for at udvide dine erobrede områder
               </p>
             </div>
             <Link to="/upload">
               <Button>
                 <Activity className="h-4 w-4 mr-2" />
-                Upload New Activity
+                Upload Ny Aktivitet
               </Button>
             </Link>
           </div>

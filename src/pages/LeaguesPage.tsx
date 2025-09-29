@@ -248,7 +248,7 @@ export default function LeaguesPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Trophy className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Loading leagues...</p>
+            <p className="text-muted-foreground">Indlæser ligaer...</p>
           </div>
         </div>
       </Layout>
@@ -265,7 +265,7 @@ export default function LeaguesPage() {
             <Link to="/">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
+                Tilbage til Hjem
               </Button>
             </Link>
           </div>
@@ -274,10 +274,10 @@ export default function LeaguesPage() {
           <div className="text-center">
             <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
               <Trophy className="h-8 w-8 text-primary" />
-              Territory Leagues
+              Territorium Ligaer
             </h1>
             <p className="text-muted-foreground">
-              Join or create competitive running leagues
+              Deltag i eller opret konkurrencedygtige løbeligaer
             </p>
           </div>
 
@@ -287,32 +287,32 @@ export default function LeaguesPage() {
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Key className="h-4 w-4 mr-2" />
-                  Join League
+                  Deltag i Liga
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Join a League</DialogTitle>
+                  <DialogTitle>Deltag i en Liga</DialogTitle>
                   <DialogDescription>
-                    Enter the invite code to join an existing league
+                    Indtast invitationskoden for at deltage i en eksisterende liga
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="inviteCode">Invite Code</Label>
+                    <Label htmlFor="inviteCode">Invitationskode</Label>
                     <Input
                       id="inviteCode"
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
-                      placeholder="Enter invite code"
+                      placeholder="Indtast invitationskode"
                     />
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setJoinDialogOpen(false)}>
-                    Cancel
+                    Annuller
                   </Button>
-                  <Button onClick={handleJoinLeague}>Join League</Button>
+                  <Button onClick={handleJoinLeague}>Deltag i Liga</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -321,37 +321,37 @@ export default function LeaguesPage() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create League
+                  Opret Liga
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create New League</DialogTitle>
+                  <DialogTitle>Opret Ny Liga</DialogTitle>
                   <DialogDescription>
-                    Set up a new competitive league for territorial battles
+                    Opret en ny konkurrencepræget liga for territoriale kampe
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name">League Name</Label>
+                    <Label htmlFor="name">Liga Navn</Label>
                     <Input
                       id="name"
                       value={newLeague.name}
                       onChange={(e) => setNewLeague({ ...newLeague, name: e.target.value })}
-                      placeholder="Enter league name"
+                      placeholder="Indtast liga navn"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="description">Description (optional)</Label>
+                    <Label htmlFor="description">Beskrivelse (valgfri)</Label>
                     <Input
                       id="description"
                       value={newLeague.description}
                       onChange={(e) => setNewLeague({ ...newLeague, description: e.target.value })}
-                      placeholder="League description"
+                      placeholder="Liga beskrivelse"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="maxMembers">Max Members</Label>
+                    <Label htmlFor="maxMembers">Maks Medlemmer</Label>
                     <Input
                       id="maxMembers"
                       type="number"
@@ -361,7 +361,7 @@ export default function LeaguesPage() {
                       onChange={(e) => setNewLeague({ ...newLeague, maxMembers: parseInt(e.target.value) || 3 })}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Free plan: max 3 members. Pro plan: up to 50 members.
+                      Gratis plan: maks 3 medlemmer. Pro plan: op til 50 medlemmer.
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -373,15 +373,15 @@ export default function LeaguesPage() {
                       className="rounded border-gray-300"
                     />
                     <Label htmlFor="isPublic" className="text-sm">
-                      Public league (appears in directory)
+                      Offentlig liga (vises i biblioteket)
                     </Label>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                    Cancel
+                    Annuller
                   </Button>
-                  <Button onClick={handleCreateLeague}>Create League</Button>
+                  <Button onClick={handleCreateLeague}>Opret Liga</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -395,7 +395,7 @@ export default function LeaguesPage() {
             <CardContent className="py-8 text-center">
               <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                No leagues found
+                Ingen ligaer fundet
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Create a new league or join an existing one to start competing

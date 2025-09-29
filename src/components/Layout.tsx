@@ -26,7 +26,7 @@ const Layout = ({ children }: LayoutProps) => {
                 size="sm"
               >
                 <MapIcon className="h-4 w-4 mr-2" />
-                Map
+                Kort
               </Button>
             </Link>
             <Link to="/dashboard">
@@ -58,7 +58,7 @@ const Layout = ({ children }: LayoutProps) => {
                   size="sm"
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  Leagues
+                  Ligaer
                 </Button>
               </Link>
               <Link to="/upload">
@@ -88,7 +88,7 @@ const Layout = ({ children }: LayoutProps) => {
               className="ml-4 flex items-center space-x-2"
             >
               <LogOut className="h-4 w-4" />
-              <span className="hidden md:inline">Sign Out</span>
+              <span className="hidden md:inline">Log Ud</span>
             </Button>
           </div>
         </div>
@@ -108,7 +108,7 @@ const Layout = ({ children }: LayoutProps) => {
               className="flex flex-col items-center h-12"
             >
               <MapIcon className="h-4 w-4" />
-              <span className="text-xs mt-1">Map</span>
+              <span className="text-xs mt-1">Kort</span>
             </Button>
           </Link>
           <Link to="/leagues">
@@ -118,7 +118,7 @@ const Layout = ({ children }: LayoutProps) => {
               className="flex flex-col items-center h-12"
             >
               <Users className="h-4 w-4" />
-              <span className="text-xs mt-1">Leagues</span>
+              <span className="text-xs mt-1">Ligaer</span>
             </Button>
           </Link>
           <Link to="/upload">

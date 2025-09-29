@@ -164,7 +164,7 @@ export default function GameSetup() {
         setActivities(
           userActivities.map((d: any) => ({
             id: d.id,
-            name: d.name ?? "Untitled activity",
+            name: d.name ?? "Unavngivet aktivitet",
             distance: typeof d.distance === "number" ? d.distance : (d.distance ?? 0),
             moving_time: d.moving_time ?? 0,
             activity_type: d.activity_type ?? "Run",
@@ -176,8 +176,8 @@ export default function GameSetup() {
         );
       } catch (error: any) {
         console.error('Error loading data:', error);
-        setError(error.message || 'Failed to load game data');
-        toast.error(error.message || 'Failed to load game data');
+        setError(error.message || 'Kunne ikke indlæse spildata');
+        toast.error(error.message || 'Kunne ikke indlæse spildata');
       } finally {
         setLoading(false);
       }
@@ -243,27 +243,27 @@ export default function GameSetup() {
       const result = await setPlayerBase(gameId, activityId);
 
       if (!result?.success) {
-        throw new Error(result?.error || "Failed to set base");
+        throw new Error(result?.error || "Kunne ikke sætte base");
       }
 
-      toast.success("Base set successfully! Checking if game can be activated...");
+      toast.success("Base sat med succes! Tjekker om spillet kan aktiveres...");
 
       // Check if game was activated
       const activationResult = result.activation_result;
       if (activationResult?.activated) {
-        toast.success("Game activated! All players have set their bases. Redirecting to live game...");
+        toast.success("Spil aktiveret! Alle spillere har sat deres baser. Omdirigerer til live spil...");
         setTimeout(() => {
           navigate(`/games/${gameId}`);
         }, 2000);
       } else {
-        toast.info(`Base set. Waiting for ${activationResult?.member_count - activationResult?.players_with_bases} more players to set their bases.`);
+        toast.info(`Base sat. Venter på at ${activationResult?.member_count - activationResult?.players_with_bases} flere spillere sætter deres baser.`);
         // Reload game data to update UI
         const overview = await rpcGetGameOverview(gameId);
         setGameData(overview);
       }
     } catch (error: any) {
       console.error('Error setting base:', error);
-      toast.error(error?.message || "Failed to set base");
+      toast.error(error?.message || "Kunne ikke sætte base");
     } finally {
       setSettingBase(null);
     }
@@ -286,7 +286,7 @@ export default function GameSetup() {
             <Link to="/leagues">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Leagues
+                Tilbage til Ligaer
               </Button>
             </Link>
           </div>
@@ -296,7 +296,7 @@ export default function GameSetup() {
               <div className="flex items-center gap-3">
                 <AlertCircle className="h-8 w-8 text-red-600" />
                 <div>
-                  <h2 className="text-xl font-semibold text-red-900">Game Setup Error</h2>
+                  <h2 className="text-xl font-semibold text-red-900">Spil Setup Fejl</h2>
                   <p className="text-red-700 mt-1">{error}</p>
                   <Button
                     onClick={() => window.location.reload()}
@@ -322,7 +322,7 @@ export default function GameSetup() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Trophy className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Loading game setup...</p>
+            <p className="text-muted-foreground">Indlæser spil setup...</p>
             {loading && !gameData && (
               <p className="text-xs text-muted-foreground/70 mt-2">
                 Fetching game data... ({gameId})
@@ -341,8 +341,8 @@ export default function GameSetup() {
     return (
       <Layout>
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Game Not Found</h2>
-          <p className="text-muted-foreground mb-4">This game doesn't exist or you don't have access to it.</p>
+          <h2 className="text-2xl font-bold mb-4">Spil Ikke Fundet</h2>
+          <p className="text-muted-foreground mb-4">Dette spil eksisterer ikke, eller du har ikke adgang til det.</p>
           <Link to="/leagues">
             <Button>
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -363,21 +363,21 @@ export default function GameSetup() {
             <Link to="/leagues">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Leagues
+                Tilbage til Ligaer
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-2">
                 <Target className="h-8 w-8 text-primary" />
-                Set Your Base
+                Sæt Din Base
               </h1>
               <p className="text-muted-foreground">
-                Choose an activity as your starting base for this game
+                Vælg en aktivitet som din startbase for dette spil
               </p>
             </div>
           </div>
           <Badge variant="secondary" className="text-sm">
-            Setup Phase
+            Setup Fase
           </Badge>
         </div>
 
@@ -464,17 +464,15 @@ export default function GameSetup() {
                     <CardContent className="py-8 text-center">
                       <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                       <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                        No Territory Activities Found
+                        Ingen Territorium Aktiviteter Fundet
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Upload activities from Strava to build your territory and choose your base
+                        Forbind til Strava for at se dine aktiviteter og vælge din base
                       </p>
-                      <Link to="/upload">
-                        <Button>
-                          <Activity className="h-4 w-4 mr-2" />
-                          Upload Activities
-                        </Button>
-                      </Link>
+                      <Button onClick={handleConnectStrava}>
+                        <Activity className="h-4 w-4 mr-2" />
+                        Forbind til Strava
+                      </Button>
                     </CardContent>
                   </Card>
                 ) : (
@@ -482,10 +480,10 @@ export default function GameSetup() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Activity className="h-5 w-5" />
-                        Choose Your Base Activity
+                        Vælg Din Base Aktivitet
                       </CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        Select one activity that will define your starting territory and baseline date
+                        Vælg en aktivitet, der vil definere dit startterritorium og baseline dato
                       </p>
                     </CardHeader>
                     <CardContent>
@@ -535,12 +533,12 @@ export default function GameSetup() {
                                 {settingBase === activity.id ? (
                                   <>
                                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                    Setting...
+                                    Sætter...
                                   </>
                                 ) : (
                                   <>
                                     <Target className="h-4 w-4 mr-2" />
-                                    Set as Base
+                                    Sæt som Base
                                   </>
                                 )}
                               </Button>
@@ -561,16 +559,16 @@ export default function GameSetup() {
           <CardHeader>
             <CardTitle className="text-sm text-yellow-800 flex items-center gap-2">
               <Target className="h-4 w-4" />
-              How Base Selection Works
+              Sådan Fungerer Base Valg
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-yellow-700 space-y-2">
             <ul className="list-disc list-inside space-y-1">
-              <li>Your base activity defines your starting territory and baseline date</li>
-              <li>Choose an activity that represents a good central location for your strategy</li>
-              <li>Only activities within your territory can be selected as base</li>
-              <li>The game starts automatically when all {memberCount} players have set their base</li>
-              <li>You can change your base selection until the game activates</li>
+              <li>Din base aktivitet definerer dit startterritorium og baseline dato</li>
+              <li>Vælg en aktivitet, der repræsenterer en god central placering for din strategi</li>
+              <li>Kun aktiviteter inden for dit territorium kan vælges som base</li>
+              <li>Spillet starter automatisk, når alle {memberCount} spillere har sat deres base</li>
+              <li>Du kan ændre dit base valg, indtil spillet aktiveres</li>
             </ul>
           </CardContent>
         </Card>

@@ -54,7 +54,7 @@ const Auth = () => {
 
     // Validation
     if (!username) {
-      setError('Username is required');
+      setError('Brugernavn er påkrævet');
       setLoading(false);
       return;
     }
@@ -130,8 +130,8 @@ const Auth = () => {
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="signin">Log Ind</TabsTrigger>
+              <TabsTrigger value="signup">Tilmeld</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signin" className="mt-6">
@@ -141,7 +141,7 @@ const Auth = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="Indtast din email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -149,11 +149,11 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Adgangskode</Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder="Indtast din adgangskode"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -161,7 +161,7 @@ const Auth = () => {
                   />
                 </div>
                 <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? 'Logger ind...' : 'Log Ind'}
                 </Button>
               </form>
             </TabsContent>
@@ -200,11 +200,11 @@ const Auth = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+                  <Label htmlFor="username" className="text-sm font-medium">Brugernavn</Label>
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Choose a username"
+                    placeholder="Vælg et brugernavn"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
@@ -217,7 +217,7 @@ const Auth = () => {
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="Indtast din email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -226,11 +226,11 @@ const Auth = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="signup-password" className="text-sm font-medium">Adgangskode</Label>
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Opret en adgangskode"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -239,7 +239,7 @@ const Auth = () => {
                 </div>
                 
                 <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Sign Up'}
+                  {loading ? 'Opretter konto...' : 'Tilmeld'}
                 </Button>
               </form>
             </TabsContent>

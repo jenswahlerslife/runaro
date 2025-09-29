@@ -256,6 +256,23 @@ export default function ActivitiesPage() {
     );
   }
 
+  // During base selection flow, show only a single CTA to connect Strava.
+  if (selectBase) {
+    const returnTo = `/activities?game=${gameId ?? ''}&selectBase=1`;
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Link to={`/strava/connect?return=${encodeURIComponent(returnTo)}`}>
+            <Button size="lg" className="px-8 py-6 text-base">
+              <Activity className="h-5 w-5 mr-2" />
+              Forbind til Strava
+            </Button>
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -390,10 +407,10 @@ export default function ActivitiesPage() {
               <p className="text-xs text-muted-foreground mb-4">
                 Run the debug SQL queries in Supabase to check if data exists in the database
               </p>
-              <Link to="/upload">
+              <Link to={`/strava/connect?return=${encodeURIComponent(`/activities${window.location.search || ''}`)}`}>
                 <Button>
                   <Activity className="h-4 w-4 mr-2" />
-                  Upload Activities
+                  Forbind til Strava
                 </Button>
               </Link>
             </CardContent>

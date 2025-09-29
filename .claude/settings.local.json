@@ -40,7 +40,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(del test_rls_fix.cjs)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(del test-setup-game-visibility.cjs)",
+      "Bash(del test-rpc-direct.cjs)"
     ],
     "deny": [],
     "ask": []

@@ -72,7 +72,7 @@ const Index = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Indlæser...</p>
         </div>
       </div>
     );
@@ -110,16 +110,16 @@ const Index = () => {
             <div className="flex items-center justify-center mb-4">
               <Gamepad2 className="h-16 w-16 text-white mr-4" />
               <h1 className="text-5xl font-bold tracking-tight">
-                Territory Game
+                Territorielt Spil
               </h1>
             </div>
             <p className="text-xl max-w-2xl mx-auto">
-              Compete with friends in territorial battles using your running routes. Expand your territory and conquer the map!
+              Konkurrér med venner i territoriale kampe ved hjælp af dine løberuter. Udvid dit territorium og erobr kortet!
             </p>
             <Button size="lg" asChild className="text-lg px-8 py-3">
               <Link to="/leagues">
                 <Play className="h-6 w-6 mr-2" />
-                Start Game
+                Start Spil
               </Link>
             </Button>
           </div>
@@ -130,15 +130,15 @@ const Index = () => {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center">
               <Map className="h-8 w-8 mx-auto text-primary" />
-              <CardTitle>Map</CardTitle>
+              <CardTitle>Kort</CardTitle>
               <CardDescription>
-                Explore your area with privacy protection
+                Udforsk dit område med beskyttelse af privatliv
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full">
                 <Link to="/map">
-                  Open Map
+                  Åbn Kort
                 </Link>
               </Button>
             </CardContent>
@@ -149,13 +149,13 @@ const Index = () => {
               <Upload className="h-8 w-8 mx-auto text-primary" />
               <CardTitle>Upload</CardTitle>
               <CardDescription>
-                Share your content and files
+                Del dit indhold og filer
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
                 <Link to="/upload">
-                  Upload Files
+                  Upload Filer
                 </Link>
               </Button>
             </CardContent>
@@ -164,15 +164,15 @@ const Index = () => {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center">
               <Trophy className="h-8 w-8 mx-auto text-primary" />
-              <CardTitle>Leagues</CardTitle>
+              <CardTitle>Ligaer</CardTitle>
               <CardDescription>
-                Join competitions and challenges
+                Deltag i konkurrencer og udfordringer
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
                 <Link to="/leagues">
-                  View Leagues
+                  Se Ligaer
                 </Link>
               </Button>
             </CardContent>
@@ -183,13 +183,13 @@ const Index = () => {
               <Activity className="h-8 w-8 mx-auto text-primary" />
               <CardTitle>Dashboard</CardTitle>
               <CardDescription>
-                View your activity and stats
+                Se din aktivitet og statistikker
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="outline" className="w-full">
                 <Link to="/dashboard">
-                  Go to Dashboard
+                  Gå til Dashboard
                 </Link>
               </Button>
             </CardContent>
