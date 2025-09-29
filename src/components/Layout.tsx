@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Home, Map as MapIcon, LogOut, Plus, Users, Activity, Crown } from 'lucide-react';
+import { LogOut, Crown } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import MyGamesMenu from '@/components/MyGamesMenu';
 
 interface LayoutProps {
   children: ReactNode;
@@ -18,26 +19,9 @@ const Layout = ({ children }: LayoutProps) => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center md:gap-x-16 lg:gap-x-24">
-          {/* Left navigation */}
+          {/* Left navigation - now empty */}
           <div className="hidden md:flex items-center justify-end gap-4 pr-2">
-            <Link to="/map">
-              <Button 
-                variant={isActive('/map') ? 'default' : 'ghost'}
-                size="sm"
-              >
-                <MapIcon className="h-4 w-4 mr-2" />
-                Kort
-              </Button>
-            </Link>
-            <Link to="/dashboard">
-              <Button 
-                variant={isActive('/dashboard') ? 'default' : 'ghost'}
-                size="sm"
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-            </Link>
+            {/* Navigation items removed */}
           </div>
 
           {/* Centered logo acts as Home */}
@@ -52,26 +36,9 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Right aligned navigation + actions */}
           <div className="justify-self-start flex items-center gap-4">
             <nav className="hidden md:flex items-center gap-4">
-              <Link to="/leagues">
-                <Button 
-                  variant={isActive('/leagues') ? 'default' : 'ghost'}
-                  size="sm"
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Ligaer
-                </Button>
-              </Link>
-              <Link to="/upload">
-                <Button 
-                  variant={isActive('/upload') ? 'default' : 'ghost'}
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Upload
-                </Button>
-              </Link>
+              <MyGamesMenu variant="desktop" />
               <Link to="/subscription">
-                <Button 
+                <Button
                   variant={isActive('/subscription') ? 'default' : 'ghost'}
                   size="sm"
                 >
@@ -101,38 +68,9 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Mobile navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border">
         <div className="flex justify-around py-2">
-          <Link to="/map">
-            <Button 
-              variant={isActive('/map') ? 'default' : 'ghost'}
-              size="sm"
-              className="flex flex-col items-center h-12"
-            >
-              <MapIcon className="h-4 w-4" />
-              <span className="text-xs mt-1">Kort</span>
-            </Button>
-          </Link>
-          <Link to="/leagues">
-            <Button 
-              variant={isActive('/leagues') ? 'default' : 'ghost'}
-              size="sm"
-              className="flex flex-col items-center h-12"
-            >
-              <Users className="h-4 w-4" />
-              <span className="text-xs mt-1">Ligaer</span>
-            </Button>
-          </Link>
-          <Link to="/upload">
-            <Button 
-              variant={isActive('/upload') ? 'default' : 'ghost'}
-              size="sm"
-              className="flex flex-col items-center h-12"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="text-xs mt-1">Upload</span>
-            </Button>
-          </Link>
+          <MyGamesMenu variant="mobile" />
           <Link to="/subscription">
-            <Button 
+            <Button
               variant={isActive('/subscription') ? 'default' : 'ghost'}
               size="sm"
               className="flex flex-col items-center h-12"
