@@ -19,33 +19,54 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Robust bounds fitting using Leaflet's native fitBounds (handles center+zoom)
-const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding = 100) => {
-  const rawBounds = new LatLngBounds(coords);
-  // Add extra margin around the geometry so it appears centered with space on all sides
-  const bounds = rawBounds.pad(0.18); // ~18% extra breathing room
+// FitManager: single source of truth for map fitting, prevents race conditions
+let fitGeneration = 0;
+let rafHandle: number | null = null;
 
-  const safeFit = () => {
-    if (!map) return;
+const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = 110) => {
+  const gen = ++fitGeneration;
+
+  const run = () => {
+    // Check if this fit was superseded
+    if (fitGeneration !== gen) {
+      console.log('[FitManager] Fit canceled (superseded)');
+      return;
+    }
+
     const anyMap = map as any;
+
     // Guard: ensure map DOM is ready
-    if (!anyMap._mapPane || !anyMap._loaded) {
+    if (!anyMap?._mapPane) {
+      console.log('[FitManager] Map pane not ready, skipping fit');
+      return;
+    }
+
+    if (!anyMap?._loaded) {
+      console.log('[FitManager] Map not loaded, using whenReady');
       map.whenReady(() => {
-        if (!anyMap._mapPane) return; // Double-check after whenReady
-        map.invalidateSize({ animate: false });
-        console.log('[focusOnTerritory] Fitting padded bounds:', bounds.toBBoxString());
-        map.fitBounds(bounds, { padding: [padding, padding] });
+        if (fitGeneration === gen && anyMap._mapPane) {
+          console.log('[FitManager] Fitting bounds after ready:', bounds.toBBoxString());
+          map.fitBounds(bounds, { padding: [padding, padding], animate: false });
+        }
       });
       return;
     }
-    map.invalidateSize({ animate: false });
-    console.log('[focusOnTerritory] Fitting padded bounds:', bounds.toBBoxString());
-    map.fitBounds(bounds, { padding: [padding, padding] });
+
+    console.log('[FitManager] Fitting bounds:', bounds.toBBoxString());
+    map.fitBounds(bounds, { padding: [padding, padding], animate: false });
   };
 
-  safeFit();
-  requestAnimationFrame(safeFit);
-  setTimeout(safeFit, 120);
+  // Cancel any pending fit and schedule this one
+  if (rafHandle !== null) {
+    cancelAnimationFrame(rafHandle);
+  }
+  rafHandle = requestAnimationFrame(run);
+};
+
+// Simplified focus function using FitManager
+const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding = 110) => {
+  const bounds = new LatLngBounds(coords).pad(0.18); // 18% breathing room
+  scheduleFit(map, bounds, padding);
 };
 
 // Animation function to show route from start to end, then show territory
@@ -111,86 +132,47 @@ const MapController: React.FC<{
   }, [map, onMapReady]);
 
   useEffect(() => {
-    // Enhanced debug logging
+    // Early return if map or territories not ready
+    if (!map || territories.length === 0) {
+      console.log('[MapController] Waiting for map or territories');
+      return;
+    }
+
     console.log('[MapController] Effect triggered:', {
-      hasMap: !!map,
       territoriesCount: territories.length,
       focusActivityId,
-      focusActivityIdType: typeof focusActivityId,
       lastFocusedAid: lastFocusedAidRef.current
     });
 
+    // If we have a specific activity to focus on, fit to that ONLY
     if (focusActivityId) {
-      console.log('[MapController] Territory stravaActivityIds (first 5):',
-        territories.slice(0, 5).map(t => ({ id: t.stravaActivityId, name: t.name }))
-      );
-    }
+      const focusTerritory = territories.find(t => t.stravaActivityId === focusActivityId);
 
-    if (map && territories.length > 0) {
-      console.log('[MapController] Processing territories for bounds fitting');
+      if (!focusTerritory) {
+        console.warn('[MapController] Focus activity not found:', focusActivityId);
+        return; // Don't fit anything if territory not found yet
+      }
 
-      // If we have a specific activity to focus on, fit to that
-      if (focusActivityId) {
-        const focusTerritory = territories.find(t => t.stravaActivityId === focusActivityId);
-        console.log('[MapController] Focus search result:', {
-          found: !!focusTerritory,
-          territoryName: focusTerritory?.name,
-          hasRouteCoords: !!focusTerritory?.routeCoordinates,
-          routeCoordsLength: focusTerritory?.routeCoordinates?.length
-        });
+      console.log('[MapController] Focusing on territory:', focusTerritory.name);
+      lastFocusedAidRef.current = focusActivityId;
 
-        if (focusTerritory) {
-          console.log('[MapController] Focusing on specific territory:', focusTerritory.name);
-
-          // Update last focused aid - ALWAYS update when we find the territory
-          lastFocusedAidRef.current = focusActivityId;
-
-          if (shouldAnimateRoute && focusTerritory.routeCoordinates && focusTerritory.routeCoordinates.length > 1) {
-            // Animate route from start to end before showing territory
-            console.log('[MapController] Using animation path');
-            animateRouteAndShowTerritory(map, focusTerritory);
-            const tb = new LatLngBounds(focusTerritory.polygon);
-            onFocus?.(tb, 100, 15);
-          } else if (focusTerritory.routeCoordinates && focusTerritory.routeCoordinates.length > 1) {
-          // Fit directly to the territory polygon (ensures complete in-frame view)
-          console.log('[MapController] Focusing directly on territory polygon');
-          const terrBounds = new LatLngBounds(focusTerritory.polygon);
-          focusOnTerritory(map, focusTerritory.polygon, 110);
-          onFocus?.(terrBounds, 110, 15);
-          } else {
-            // Focus on territory polygon
-            console.log('[MapController] Focusing on territory polygon');
-            focusOnTerritory(map, focusTerritory.polygon, 80);
-            const bounds = new LatLngBounds(focusTerritory.polygon);
-            onFocus?.(bounds, 80, 15);
-          }
-          return; // Early return prevents "fit all" from running
-        } else {
-          console.warn('[MapController] Focus activity not found:', focusActivityId);
-          // Clear the ref if territory is not found
-          lastFocusedAidRef.current = null;
-        }
+      // Single fit to polygon, with optional animation
+      if (shouldAnimateRoute && focusTerritory.routeCoordinates && focusTerritory.routeCoordinates.length > 1) {
+        console.log('[MapController] Using animation path');
+        animateRouteAndShowTerritory(map, focusTerritory);
       } else {
-        // No focus activity requested, clear the ref
-        lastFocusedAidRef.current = null;
+        console.log('[MapController] Focusing directly on territory polygon');
+        focusOnTerritory(map, focusTerritory.polygon, 110);
       }
 
-      // Only fit to all if no focus activity is requested (not just "not found")
-      if (!focusActivityId) {
-        // Otherwise fit to all territories
-        const allPoints = territories.flatMap(t => t.polygon);
-        console.log('[MapController] Fitting bounds to all territories, total points:', allPoints.length);
-
-        if (allPoints.length > 0) {
-          focusOnTerritory(map, allPoints, 100);
-          const bounds = new LatLngBounds(allPoints);
-          onFocus?.(bounds, 100, 15);
-        }
-      }
-    } else if (territories.length === 0) {
-      console.log('[MapController] No territories to fit bounds to');
+      const bounds = new LatLngBounds(focusTerritory.polygon);
+      onFocus?.(bounds, 110, 15);
+      return; // Early return - do NOT fit all when focusing
     }
-  }, [map, territories, focusActivityId, shouldAnimateRoute]);
+
+    // No focus activity - skip "fit all" to avoid unnecessary view changes
+    console.log('[MapController] No focus activity, skipping fit-all');
+  }, [map, territories, focusActivityId, shouldAnimateRoute, onFocus]);
 
   return null;
 };
@@ -344,8 +326,10 @@ const Map: React.FC = () => {
 
   const handleMapReady = (map: LeafletMap) => {
     mapRef.current = map;
-    // Invalidate size after mount to avoid cut-off bounds due to container layout
-    requestAnimationFrame(() => map.invalidateSize());
+    // Single invalidate on mount to ensure proper sizing
+    requestAnimationFrame(() => {
+      map.invalidateSize({ animate: false });
+    });
   };
 
   const handleFocused = (bounds: LatLngBounds, padding: number, maxZoom: number) => {
@@ -353,24 +337,10 @@ const Map: React.FC = () => {
     lastFitOptionsRef.current = { padding, maxZoom };
   };
 
-  // Re-fit once tiles finish loading to avoid post-load layout shift
+  // Tile load handler: no-op (FitManager handles all fitting)
   const handleTileLoad = () => {
-    const map = mapRef.current;
-    if (!map) return;
-    const anyMap = map as any;
-    // Guard: ensure map DOM is ready
-    if (!anyMap._mapPane || !anyMap._loaded) return;
-
-    const b = lastBoundsRef.current;
-    const opts = lastFitOptionsRef.current;
-    if (!b || !opts) return;
-
-    // Debounce: run shortly after a burst of tile loads
-    setTimeout(() => {
-      if (!anyMap._mapPane) return; // Re-check before executing
-      map.invalidateSize({ animate: false });
-      map.fitBounds(b, { padding: [opts.padding, opts.padding] });
-    }, 50);
+    // FitManager already handles all fits; no additional tile-based refitting needed
+    // This prevents late tile loads from interfering with focused view
   };
 
   const handleLocate = () => {
