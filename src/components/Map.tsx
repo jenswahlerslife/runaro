@@ -24,26 +24,44 @@ const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding =
   const rawBounds = new LatLngBounds(coords);
   // Add extra margin around the geometry so it appears centered with space on all sides
   const bounds = rawBounds.pad(0.18); // ~18% extra breathing room
-  const doFit = () => {
-    map.invalidateSize();
+
+  const safeFit = () => {
+    if (!map) return;
+    const anyMap = map as any;
+    // Guard: ensure map DOM is ready
+    if (!anyMap._mapPane || !anyMap._loaded) {
+      map.whenReady(() => {
+        if (!anyMap._mapPane) return; // Double-check after whenReady
+        map.invalidateSize({ animate: false });
+        console.log('[focusOnTerritory] Fitting padded bounds:', bounds.toBBoxString());
+        map.fitBounds(bounds, { padding: [padding, padding] });
+      });
+      return;
+    }
+    map.invalidateSize({ animate: false });
     console.log('[focusOnTerritory] Fitting padded bounds:', bounds.toBBoxString());
     map.fitBounds(bounds, { padding: [padding, padding] });
   };
-  doFit();
-  requestAnimationFrame(doFit);
-  setTimeout(doFit, 120);
-  map.once('resize', doFit);
+
+  safeFit();
+  requestAnimationFrame(safeFit);
+  setTimeout(safeFit, 120);
 };
 
 // Animation function to show route from start to end, then show territory
 const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territory) => {
   if (!territory.routeCoordinates || territory.routeCoordinates.length < 2) {
     console.warn('[Animation] No route coordinates available for animation');
+    // Fallback to polygon-only fit
+    focusOnTerritory(map, territory.polygon, 110);
     return;
   }
 
   const routeCoords = territory.routeCoordinates;
   console.log('[Animation] Starting route animation with', routeCoords.length, 'points');
+
+  // Focus to the full territory polygon ONCE at the start (no intermediate fits)
+  focusOnTerritory(map, territory.polygon, 110);
 
   // Create a temporary polyline for animation
   const animatedLine = L.polyline([], {
@@ -51,9 +69,6 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
     weight: 4,
     opacity: 0.8
   }).addTo(map);
-
-  // Focus to the full territory polygon for guaranteed in-frame view
-  focusOnTerritory(map, territory.polygon, 110);
 
   // Animate the route drawing
   const animationDuration = 2000; // 2 seconds
@@ -70,11 +85,10 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
     await new Promise(resolve => setTimeout(resolve, animationDuration / stepCount));
   }
 
-  // Wait a moment, then remove the animated line and show the territory
+  // Wait a moment, then remove the animated line (no additional fit needed)
   setTimeout(() => {
     map.removeLayer(animatedLine);
-    console.log('[Animation] Route animation complete, ensuring territory in frame');
-    focusOnTerritory(map, territory.polygon, 110);
+    console.log('[Animation] Route animation complete');
   }, 500);
 };
 
@@ -343,12 +357,18 @@ const Map: React.FC = () => {
   const handleTileLoad = () => {
     const map = mapRef.current;
     if (!map) return;
+    const anyMap = map as any;
+    // Guard: ensure map DOM is ready
+    if (!anyMap._mapPane || !anyMap._loaded) return;
+
     const b = lastBoundsRef.current;
     const opts = lastFitOptionsRef.current;
     if (!b || !opts) return;
+
     // Debounce: run shortly after a burst of tile loads
     setTimeout(() => {
-      map.invalidateSize();
+      if (!anyMap._mapPane) return; // Re-check before executing
+      map.invalidateSize({ animate: false });
       map.fitBounds(b, { padding: [opts.padding, opts.padding] });
     }, 50);
   };
