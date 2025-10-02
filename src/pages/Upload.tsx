@@ -29,7 +29,7 @@ const Upload = () => {
   useEffect(() => {
     console.log('Upload useEffect triggered:', { hasStravaConnection, loading, user: !!user, gameId });
     if (hasStravaConnection && !loading) {
-      const targetUrl = gameId ? `/activities?game=${gameId}&selectBase=1` : '/strava/success';
+      const targetUrl = gameId ? `/games/${gameId}/setup` : '/strava/success';
       console.log(`Strava connected, redirecting to ${targetUrl} in 2 seconds...`);
       const timer = setTimeout(() => {
         console.log(`Executing redirect to ${targetUrl}`);
@@ -117,7 +117,7 @@ const Upload = () => {
                     </p>
                     <div className="mt-4">
                       <Button
-                        onClick={() => navigate(gameId ? `/activities?game=${gameId}&selectBase=1` : '/strava/success')}
+                        onClick={() => navigate(gameId ? `/games/${gameId}/setup` : '/strava/success')}
                         className="bg-white/20 hover:bg-white/30 text-white border-white/30"
                         size="lg"
                       >

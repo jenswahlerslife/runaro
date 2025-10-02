@@ -152,20 +152,21 @@ export async function getUserActivitiesWithTerritory() {
       throw new Error('Profile not found');
     }
 
-    // Fetch activities with territory info
+    // Fetch activities with territory info (include both route and polyline)
     const { data: activities, error: activitiesError } = await supabase
       .from('user_activities')
       .select(`
-        id, 
-        name, 
-        distance, 
-        moving_time, 
-        activity_type, 
-        start_date, 
+        id,
+        name,
+        distance,
+        moving_time,
+        activity_type,
+        start_date,
         strava_activity_id,
         is_base,
         included_in_game,
-        route
+        route,
+        polyline
       `)
       .eq('user_id', profile.id)
       .order('start_date', { ascending: false });

@@ -217,7 +217,7 @@ export default function LeaguesPage() {
       const gameStatus = activeGame.status || 'setup';
 
       const path = gameStatus === 'setup'
-        ? `/activities?game=${gameId}&selectBase=1`
+        ? `/games/${gameId}/setup`
         : `/games/${gameId}`;
 
       navigate(path);
@@ -413,7 +413,21 @@ export default function LeaguesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(leagues ?? []).map((league) => (
-              <Card key={league.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={league.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer hover:bg-muted/40"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  navigate(`/leagues/${league.id}/members`);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/leagues/${league.id}/members`);
+                  }
+                }}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -422,7 +436,7 @@ export default function LeaguesPage() {
                         {league.name}
                         {league.is_admin && (
                           <button
-                            onClick={() => navigate(`/leagues/${league.id}/members`)}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/leagues/${league.id}/members`); }}
                             className="relative inline-flex items-center justify-center p-1 rounded hover:bg-blue-50 transition-colors"
                             title={`Admin panel ${(league?.pending_requests_count ?? 0) > 0 ? `- ${league.pending_requests_count} pending requests` : ''}`}
                           >
@@ -471,11 +485,11 @@ export default function LeaguesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/leagues/${league.id}/members`)}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/leagues/${league.id}/members`) }}
                         className="flex-1 relative"
                       >
                         <Users className="h-4 w-4 mr-1" />
-                        Members
+                        Se liga
                         {league?.is_admin && (league?.pending_requests_count ?? 0) > 0 && (
                           <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
                             {(league?.pending_requests_count ?? 0) > 9 ? '9+' : league?.pending_requests_count ?? 0}
@@ -487,9 +501,10 @@ export default function LeaguesPage() {
                       {activeGames[league.id] && (activeGames[league.id] as any)?.status === 'setup' ? (
                         <Button
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const game = activeGames[league.id] as any;
-                            navigate(`/activities?game=${game.id}&selectBase=1`);
+                            navigate(`/games/${game.id}/setup`);
                           }}
                           className="flex-1"
                         >
@@ -499,7 +514,7 @@ export default function LeaguesPage() {
                       ) : league.is_admin ? (
                         <Button
                           size="sm"
-                          onClick={() => handleGameButtonClick(league)}
+                          onClick={(e) => { e.stopPropagation(); handleGameButtonClick(league); }}
                           className="flex-1"
                         >
                           <Play className="h-4 w-4 mr-1" />
@@ -509,7 +524,8 @@ export default function LeaguesPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const game = activeGames[league.id] as any;
                             navigate(`/games/${game.id}`);
                           }}

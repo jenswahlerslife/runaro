@@ -47,7 +47,7 @@ export default function LeagueMembersRefactored() {
   const handleNavigateToGame = () => {
     if (!activeGame) return;
     const path = activeGame.status === "setup"
-      ? `/activities?game=${activeGame.id}&selectBase=1`
+      ? `/games/${activeGame.id}/setup`
       : `/games/${activeGame.id}`;
     navigate(path);
   };

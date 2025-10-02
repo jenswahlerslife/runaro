@@ -1,5 +1,5 @@
 import * as polyline from 'polyline';
-
+import polyline from 'polyline';
 export type LatLng = [number, number];
 
 export function decodePolylineToLatLngs(encoded: string): LatLng[] {

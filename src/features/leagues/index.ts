@@ -18,6 +18,7 @@ export { MembersList } from './ui/MembersList';
 export { JoinRequestsList } from './ui/JoinRequestsList';
 export { UserSearch } from './ui/UserSearch';
 export { ActiveGameCard } from './ui/ActiveGameCard';
+export { SetupGameCard } from './ui/SetupGameCard';
 export { RoleDisplay, getRoleIcon } from './ui/RoleDisplay';
 
 // Export services (for advanced usage)

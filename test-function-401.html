@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Import Function - 401 Debug</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #0f0;
+    }
+    button {
+      background: #0f0;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    button:hover {
+      background: #0c0;
+    }
+    #output {
+      background: #000;
+      padding: 20px;
+      margin-top: 20px;
+      border: 1px solid #0f0;
+      white-space: pre-wrap;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .success { color: #0f0; }
+    .error { color: #f00; }
+    .info { color: #0ff; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>🔍 Import Function 401 Debugger</h1>
+  <p>This will test the import-recent-activities function step by step</p>
+
+  <button onclick="runTest()">▶️ Run Complete Test</button>
+  <button onclick="clearOutput()">🗑️ Clear Output</button>
+
+  <div id="output"></div>
+
+  <script>
+    const output = document.getElementById('output');
+
+    const supabase = window.supabase.createClient(
+      'https://ojjpslrhyutizwpvvngu.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzAyNDUsImV4cCI6MjA3MTgwNjI0NX0.qsKY1YPBaphie0BwV71-kHcg73ZfKNuBUHR9yHO78zA'
+    );
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toISOString().substring(11, 23);
+      const line = `[${timestamp}] ${message}`;
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = line + '\\n';
+      output.appendChild(span);
+      console.log(line);
+    }
+
+    function clearOutput() {
+      output.innerHTML = '';
+    }
+
+    async function runTest() {
+      clearOutput();
+      log('🚀 Starting comprehensive 401 debug test...', 'info');
+      log('━'.repeat(80), 'info');
+
+      try {
+        // Step 1: Check session
+        log('\\n📝 STEP 1: Checking authentication session', 'info');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+          log(`❌ ERROR: Not authenticated`, 'error');
+          log(`   ${sessionError?.message || 'No session found'}`, 'error');
+          log('\\n💡 ACTION: Please login first at /auth', 'info');
+          return;
+        }
+
+        log(`✅ Authenticated successfully`, 'success');
+        log(`   User ID: ${session.user.id}`, 'info');
+        log(`   Email: ${session.user.email}`, 'info');
+        log(`   Token expires: ${new Date(session.expires_at * 1000).toISOString()}`, 'info');
+        log(`   Token preview: ${session.access_token.substring(0, 50)}...`, 'info');
+
+        // Step 2: Check function configuration
+        log('\\n📝 STEP 2: Checking function configuration', 'info');
+        log('   Fetching function details from API...', 'info');
+
+        const configResponse = await fetch(
+          'https://api.supabase.com/v1/projects/ojjpslrhyutizwpvvngu/functions/import-recent-activities',
+          {
+            headers: {
+              'Authorization': 'Bearer sbp_38d564351d1f0f43a23413c6e527faf2d255e858'
+            }
+          }
+        );
+
+        if (configResponse.ok) {
+          const config = await configResponse.json();
+          log(`✅ Function config retrieved`, 'success');
+          log(`   verify_jwt: ${config.verify_jwt}`, config.verify_jwt ? 'error' : 'success');
+          log(`   status: ${config.status}`, 'info');
+          log(`   version: ${config.version}`, 'info');
+
+          if (config.verify_jwt) {
+            log('\\n⚠️  WARNING: verify_jwt is TRUE!', 'error');
+            log('   Supabase will block requests BEFORE they reach function code', 'error');
+            log('   This is why you see 401 errors', 'error');
+          } else {
+            log('\\n✅ verify_jwt is FALSE - manual auth will be used', 'success');
+          }
+        } else {
+          log(`⚠️  Could not fetch function config: ${configResponse.status}`, 'error');
+        }
+
+        // Step 3: Test with manual fetch
+        log('\\n📝 STEP 3: Testing with manual fetch (bypassing client SDK)', 'info');
+        log('   Sending POST to function endpoint...', 'info');
+
+        const manualResponse = await fetch(
+          'https://ojjpslrhyutizwpvvngu.supabase.co/functions/v1/import-recent-activities',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ limit: 1 })
+          }
+        );
+
+        log(`   Response status: ${manualResponse.status} ${manualResponse.statusText}`,
+            manualResponse.ok ? 'success' : 'error');
+
+        const responseText = await manualResponse.text();
+        log(`   Response body: ${responseText.substring(0, 500)}`,
+            manualResponse.ok ? 'success' : 'error');
+
+        if (!manualResponse.ok) {
+          log('\\n❌ MANUAL FETCH FAILED', 'error');
+
+          if (manualResponse.status === 401) {
+            log('\\n🔍 401 UNAUTHORIZED - Possible causes:', 'error');
+            log('   1. verify_jwt=true (Supabase blocks before function code)', 'error');
+            log('   2. JWT token invalid or expired', 'error');
+            log('   3. Function env vars (SUPABASE_ANON_KEY) mismatch', 'error');
+            log('\\n💡 Next steps:', 'info');
+            log('   - Check Supabase Dashboard → Functions → import-recent-activities → Logs', 'info');
+            log('   - Look for "AUTH DEBUG" messages', 'info');
+            log('   - If no logs appear, verify_jwt is blocking at edge level', 'info');
+          }
+        } else {
+          log('\\n✅ MANUAL FETCH SUCCEEDED!', 'success');
+          try {
+            const data = JSON.parse(responseText);
+            log(`   Inserted: ${data.inserted_count} activities`, 'success');
+            log(`   Already present: ${data.already_present} activities`, 'success');
+          } catch (e) {
+            log(`   Data: ${responseText}`, 'success');
+          }
+        }
+
+        // Step 4: Test with supabase.functions.invoke
+        log('\\n📝 STEP 4: Testing with supabase.functions.invoke', 'info');
+
+        const { data: invokeData, error: invokeError } = await supabase.functions.invoke(
+          'import-recent-activities',
+          {
+            body: { limit: 1 },
+            headers: {
+              Authorization: `Bearer ${session.access_token}`
+            }
+          }
+        );
+
+        if (invokeError) {
+          log(`❌ INVOKE FAILED: ${invokeError.message}`, 'error');
+          log(`   Error details: ${JSON.stringify(invokeError, null, 2)}`, 'error');
+        } else {
+          log(`✅ INVOKE SUCCEEDED!`, 'success');
+          log(`   Result: ${JSON.stringify(invokeData, null, 2)}`, 'success');
+        }
+
+        log('\\n━'.repeat(80), 'info');
+        log('🏁 Test complete!', 'info');
+
+      } catch (error) {
+        log(`\\n❌ UNEXPECTED ERROR: ${error.message}`, 'error');
+        log(`   Stack: ${error.stack}`, 'error');
+      }
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      log('Ready to test. Click "Run Complete Test" to begin.', 'info');
+    });
+  </script>
+</body>
+</html>

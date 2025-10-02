@@ -35,7 +35,7 @@ function TestStartGameCta({ gameId, gameStatus }: { gameId: string; gameStatus: 
   const navigate = mockNavigate;
 
   const handleStartGame = () => {
-    navigate(`/activities?game=${gameId}&selectBase=1`);
+    navigate(`/games/${gameId}/setup`);
   };
 
   if (gameStatus !== 'setup') return null;
@@ -85,7 +85,7 @@ describe('StartGameCta', () => {
     expect(screen.queryByTestId('start-game-btn')).not.toBeInTheDocument();
   });
 
-  it('navigates to activities page for base selection when clicked', () => {
+  it('navigates to game setup page for base selection when clicked', () => {
     render(
       <TestWrapper>
         <TestStartGameCta gameId="game123" gameStatus="setup" />
@@ -95,6 +95,6 @@ describe('StartGameCta', () => {
     const startButton = screen.getByTestId('start-game-btn');
     fireEvent.click(startButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/activities?game=game123&selectBase=1');
+    expect(mockNavigate).toHaveBeenCalledWith('/games/game123/setup');
   });
 });

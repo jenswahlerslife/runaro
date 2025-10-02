@@ -28,6 +28,8 @@ import GameSetup from "./pages/GameSetup";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AuthDebugPage from "./pages/AuthDebugPage";
 import MyGamesPage from "./pages/MyGamesPage";
+import DiagnosticImport from "./pages/DiagnosticImport";
+import FunctionHealthCheck from "./pages/FunctionHealthCheck";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,8 @@ const App = () => (
               <>
                 <Route path="/debug/strava" element={<StravaDebug />} />
                 <Route path="/debug/auth" element={<AuthDebugPage />} />
+                <Route path="/debug/import" element={<DiagnosticImport />} />
+                <Route path="/debug/health" element={<FunctionHealthCheck />} />
                 <Route path="/test/strava-local" element={<StravaLocalTest />} />
                 <Route path="/test/strava-flow" element={<StravaTestFlow />} />
               </>

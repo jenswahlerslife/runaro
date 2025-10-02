@@ -33,7 +33,7 @@ class EdgeFunctionDeployer {
   /**
    * Deploy Edge Function via Supabase API
    */
-  async deployFunction(functionName, functionCode = null) {
+  async deployFunction(functionName, functionCode = null, options = {}) {
     console.log(`🚀 Deploying Edge Function: ${functionName}`);
 
     // Read function code if not provided
@@ -41,20 +41,41 @@ class EdgeFunctionDeployer {
       functionCode = this.readFunctionCode(functionName);
     }
 
+    // Functions that handle their own JWT verification
+    const customAuthFunctions = ['import-recent-activities'];
+    const verifyJwt = options.verifyJwt ?? !customAuthFunctions.includes(functionName);
+
+    console.log(`   JWT verification: ${verifyJwt ? 'enabled (Supabase)' : 'disabled (custom)'}`);
+
     try {
-      // Use the PATCH method that worked for transfer-activity
-      const response = await fetch(`${this.baseUrl}/projects/${this.projectRef}/functions/${functionName}`, {
-        method: 'PATCH',
+      // First, try to create a new version via POST
+      let response = await fetch(`${this.baseUrl}/projects/${this.projectRef}/functions/${functionName}/versions`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          source: functionCode,
-          verify_jwt: true,
-          import_map: '{}'
+          code: functionCode,
+          verify_jwt: verifyJwt,
+          import_map_code: '{}'
         })
       });
+
+      // If POST fails, fallback to PATCH (for config updates only)
+      if (!response.ok) {
+        console.log(`   POST failed (${response.status}), trying PATCH...`);
+        response = await fetch(`${this.baseUrl}/projects/${this.projectRef}/functions/${functionName}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            verify_jwt: verifyJwt
+          })
+        });
+      }
 
       if (response.ok) {
         const result = await response.json();

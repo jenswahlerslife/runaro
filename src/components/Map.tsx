@@ -19,6 +19,75 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Calculate geographic center of coordinates (cache bust v2)
+const calculateCenter = (coords: [number, number][]): [number, number] => {
+  if (coords.length === 0) return [0, 0];
+
+  let sumLat = 0;
+  let sumLng = 0;
+
+  coords.forEach(([lat, lng]) => {
+    sumLat += lat;
+    sumLng += lng;
+  });
+
+  return [sumLat / coords.length, sumLng / coords.length];
+};
+
+// Calculate appropriate zoom level based on bounds
+const calculateZoomForBounds = (map: LeafletMap, bounds: LatLngBounds, padding = 50): number => {
+  const mapSize = map.getSize();
+  const nePx = map.project(bounds.getNorthEast(), 0);
+  const swPx = map.project(bounds.getSouthWest(), 0);
+
+  const boundsWidth = Math.abs(nePx.x - swPx.x);
+  const boundsHeight = Math.abs(nePx.y - swPx.y);
+
+  const availableWidth = mapSize.x - (padding * 2);
+  const availableHeight = mapSize.y - (padding * 2);
+
+  const scaleX = availableWidth / boundsWidth;
+  const scaleY = availableHeight / boundsHeight;
+  const scale = Math.min(scaleX, scaleY);
+
+  const zoom = Math.floor(Math.log2(scale));
+  return Math.max(10, Math.min(16, zoom)); // Clamp between 10-16
+};
+
+// Robust center-based focusing that ensures entire route is visible
+const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding = 100) => {
+  const doFocus = () => {
+    map.invalidateSize();
+
+    // Calculate center point
+    const center = calculateCenter(coords);
+    console.log('[focusOnTerritory] Center calculated:', center);
+
+    // Calculate bounds
+    const bounds = new LatLngBounds(coords);
+    console.log('[focusOnTerritory] Bounds:', bounds.toBBoxString());
+
+    // Calculate zoom level that fits entire route
+    const zoom = calculateZoomForBounds(map, bounds, padding);
+    console.log('[focusOnTerritory] Calculated zoom:', zoom);
+
+    // Center the map
+    map.setView(center, zoom, { animate: true, duration: 0.5 });
+  };
+
+  // Initial focus
+  doFocus();
+
+  // Re-focus after layout stabilizes
+  requestAnimationFrame(doFocus);
+
+  // Final focus after tiles load
+  setTimeout(doFocus, 100);
+
+  // Safety: re-focus on container resize
+  map.once('resize', doFocus);
+};
+
 // Animation function to show route from start to end, then show territory
 const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territory) => {
   if (!territory.routeCoordinates || territory.routeCoordinates.length < 2) {
@@ -36,9 +105,8 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
     opacity: 0.8
   }).addTo(map);
 
-  // Fit map to show the entire route
-  const routeBounds = new LatLngBounds(routeCoords);
-  map.fitBounds(routeBounds, { padding: [20, 20] });
+  // Center on the route using new focus method
+  focusOnTerritory(map, routeCoords, 80);
 
   // Animate the route drawing
   const animationDuration = 2000; // 2 seconds
@@ -61,8 +129,7 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
     console.log('[Animation] Route animation complete, showing territory');
 
     // Now zoom out slightly to show the territory area
-    const territoryBounds = new LatLngBounds(territory.polygon);
-    map.fitBounds(territoryBounds, { padding: [30, 30] });
+    focusOnTerritory(map, territory.polygon, 100);
   }, 500);
 };
 
@@ -73,9 +140,11 @@ const MapController: React.FC<{
   focusActivityId: number | null;
   shouldAnimateRoute: boolean;
   onMapReady: (map: LeafletMap) => void;
-}> = ({ userLocation, territories, focusActivityId, shouldAnimateRoute, onMapReady }) => {
+  onFocus?: (bounds: LatLngBounds, padding: number, maxZoom: number) => void;
+}> = ({ userLocation, territories, focusActivityId, shouldAnimateRoute, onMapReady, onFocus }) => {
   const map = useMap();
-  
+  const lastFocusedAidRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (map) {
       onMapReady(map);
@@ -83,43 +152,81 @@ const MapController: React.FC<{
   }, [map, onMapReady]);
 
   useEffect(() => {
-    console.log('[MapController] Effect triggered:', { 
-      hasMap: !!map, 
-      territoriesCount: territories.length, 
-      focusActivityId 
+    // Enhanced debug logging
+    console.log('[MapController] Effect triggered:', {
+      hasMap: !!map,
+      territoriesCount: territories.length,
+      focusActivityId,
+      focusActivityIdType: typeof focusActivityId,
+      lastFocusedAid: lastFocusedAidRef.current
     });
-    
+
+    if (focusActivityId) {
+      console.log('[MapController] Territory stravaActivityIds (first 5):',
+        territories.slice(0, 5).map(t => ({ id: t.stravaActivityId, name: t.name }))
+      );
+    }
+
     if (map && territories.length > 0) {
       console.log('[MapController] Processing territories for bounds fitting');
-      
+
       // If we have a specific activity to focus on, fit to that
       if (focusActivityId) {
         const focusTerritory = territories.find(t => t.stravaActivityId === focusActivityId);
+        console.log('[MapController] Focus search result:', {
+          found: !!focusTerritory,
+          territoryName: focusTerritory?.name,
+          hasRouteCoords: !!focusTerritory?.routeCoordinates,
+          routeCoordsLength: focusTerritory?.routeCoordinates?.length
+        });
+
         if (focusTerritory) {
           console.log('[MapController] Focusing on specific territory:', focusTerritory.name);
 
-          if (shouldAnimateRoute && focusTerritory.routeCoordinates) {
+          // Update last focused aid - ALWAYS update when we find the territory
+          lastFocusedAidRef.current = focusActivityId;
+
+          if (shouldAnimateRoute && focusTerritory.routeCoordinates && focusTerritory.routeCoordinates.length > 1) {
             // Animate route from start to end before showing territory
+            console.log('[MapController] Using animation path');
             animateRouteAndShowTerritory(map, focusTerritory);
+            const tb = new LatLngBounds(focusTerritory.polygon);
+            onFocus?.(tb, 100, 15);
+          } else if (focusTerritory.routeCoordinates && focusTerritory.routeCoordinates.length > 1) {
+            // Focus on route directly - centered and properly zoomed
+            console.log('[MapController] Focusing on route with', focusTerritory.routeCoordinates.length, 'points');
+            focusOnTerritory(map, focusTerritory.routeCoordinates, 80);
+            const routeBounds = new LatLngBounds(focusTerritory.routeCoordinates);
+            onFocus?.(routeBounds, 80, 15);
           } else {
-            // Just fit bounds normally
+            // Focus on territory polygon
+            console.log('[MapController] Focusing on territory polygon');
+            focusOnTerritory(map, focusTerritory.polygon, 80);
             const bounds = new LatLngBounds(focusTerritory.polygon);
-            map.fitBounds(bounds, { padding: [20, 20] });
+            onFocus?.(bounds, 80, 15);
           }
-          return;
+          return; // Early return prevents "fit all" from running
         } else {
           console.warn('[MapController] Focus activity not found:', focusActivityId);
+          // Clear the ref if territory is not found
+          lastFocusedAidRef.current = null;
         }
+      } else {
+        // No focus activity requested, clear the ref
+        lastFocusedAidRef.current = null;
       }
-      
-      // Otherwise fit to all territories
-      const allPoints = territories.flatMap(t => t.polygon);
-      console.log('[MapController] Fitting bounds to all territories, total points:', allPoints.length);
-      
-      if (allPoints.length > 0) {
-        const bounds = new LatLngBounds(allPoints);
-        console.log('[MapController] Bounds calculated:', bounds.toBBoxString());
-        map.fitBounds(bounds, { padding: [20, 20] });
+
+      // Only fit to all if no focus activity is requested (not just "not found")
+      if (!focusActivityId) {
+        // Otherwise fit to all territories
+        const allPoints = territories.flatMap(t => t.polygon);
+        console.log('[MapController] Fitting bounds to all territories, total points:', allPoints.length);
+
+        if (allPoints.length > 0) {
+          focusOnTerritory(map, allPoints, 100);
+          const bounds = new LatLngBounds(allPoints);
+          onFocus?.(bounds, 100, 15);
+        }
       }
     } else if (territories.length === 0) {
       console.log('[MapController] No territories to fit bounds to');
@@ -164,6 +271,8 @@ const Map: React.FC = () => {
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [loading, setLoading] = useState(true);
   const mapRef = useRef<LeafletMap | null>(null);
+  const lastBoundsRef = useRef<LatLngBounds | null>(null);
+  const lastFitOptionsRef = useRef<{ padding: number; maxZoom: number } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -276,6 +385,24 @@ const Map: React.FC = () => {
 
   const handleMapReady = (map: LeafletMap) => {
     mapRef.current = map;
+    // Invalidate size after mount to avoid cut-off bounds due to container layout
+    requestAnimationFrame(() => map.invalidateSize());
+  };
+
+  const handleFocused = (bounds: LatLngBounds, padding: number, maxZoom: number) => {
+    lastBoundsRef.current = bounds;
+    lastFitOptionsRef.current = { padding, maxZoom };
+  };
+
+  // Re-fit once tiles finish loading to avoid post-load layout shift
+  const handleTileLoad = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const b = lastBoundsRef.current;
+    const opts = lastFitOptionsRef.current;
+    if (!b || !opts) return;
+    // Debounce: run shortly after a burst of tile loads
+    setTimeout(() => focusBounds(map, b, opts.padding, opts.maxZoom), 50);
   };
 
   const handleLocate = () => {
@@ -383,11 +510,13 @@ const Map: React.FC = () => {
             focusActivityId={focusActivityId}
             shouldAnimateRoute={shouldAnimateRoute}
             onMapReady={handleMapReady}
+            onFocus={handleFocused}
           />
           <TileLayer
             key={mapStyle}
             attribution={mapStyles[mapStyle].attribution}
             url={mapStyles[mapStyle].url}
+            eventHandlers={{ load: handleTileLoad }}
           />
 
           {showArea && (
@@ -411,7 +540,7 @@ const Map: React.FC = () => {
           )}
 
           {/* Render territories as polygons */}
-          {territories.map((territory, index) => {
+          {(focusActivityId ? territories.filter(t => t.stravaActivityId === focusActivityId) : []).map((territory, index) => {
             console.log(`[Map] Rendering territory ${index + 1}:`, {
               id: territory.id,
               name: territory.name,

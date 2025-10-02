@@ -81,7 +81,33 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [settingBase, setSettingBase] = useState<string | null>(null);
   const [recalculating, setRecalculating] = useState(false);
+  const [hasStravaConnection, setHasStravaConnection] = useState<boolean | null>(null);
   const { toast } = useToast();
+
+  // Check Strava connection status
+  useEffect(() => {
+    const checkStravaConnection = async () => {
+      if (!user) return;
+
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('strava_access_token')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const connected = !!profile?.strava_access_token;
+        setHasStravaConnection(connected);
+      } catch (error) {
+        console.error('Error checking Strava connection:', error);
+        setHasStravaConnection(false);
+      }
+    };
+
+    checkStravaConnection();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -256,18 +282,34 @@ export default function ActivitiesPage() {
     );
   }
 
-  // During base selection flow, show only a single CTA to connect Strava.
-  if (selectBase) {
-    const returnTo = `/activities?game=${gameId ?? ''}&selectBase=1`;
+  // Legacy base selection flow - redirect to new GameSetup flow
+  if (selectBase && gameId) {
+    // Auto-redirect after 2 seconds
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        navigate(`/games/${gameId}/setup`);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }, [gameId, navigate]);
+
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Link to={`/strava/connect?return=${encodeURIComponent(returnTo)}`}>
-            <Button size="lg" className="px-8 py-6 text-base">
-              <Activity className="h-5 w-5 mr-2" />
-              Forbind til Strava
-            </Button>
-          </Link>
+          <Card className="p-8 max-w-md">
+            <CardContent className="text-center space-y-4">
+              <Target className="h-12 w-12 mx-auto text-orange-500" />
+              <h2 className="text-xl font-semibold">Basevalg er flyttet</h2>
+              <p className="text-muted-foreground">
+                Basevalg sker nu direkte på spil setup siden. Du omdirigeres automatisk...
+              </p>
+              <Link to={`/games/${gameId}/setup`}>
+                <Button size="lg">
+                  <Target className="h-4 w-4 mr-2" />
+                  Gå til Basevalg
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     );
@@ -399,18 +441,23 @@ export default function ActivitiesPage() {
             <CardContent className="py-8 text-center">
               <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                No activities found
+                {selectBase ? "Ingen løbeaktiviteter fundet" : "No activities found"}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Upload activities from Strava to see them here
+                {selectBase
+                  ? "Du skal have mindst én løbeaktivitet for at kunne vælge en base. Gå til Strava Success-siden for at importere dine aktiviteter."
+                  : "Upload activities from Strava to see them here"
+                }
               </p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Run the debug SQL queries in Supabase to check if data exists in the database
-              </p>
-              <Link to={`/strava/connect?return=${encodeURIComponent(`/activities${window.location.search || ''}`)}`}>
+              {!selectBase && (
+                <p className="text-xs text-muted-foreground mb-4">
+                  Run the debug SQL queries in Supabase to check if data exists in the database
+                </p>
+              )}
+              <Link to={selectBase ? "/strava/success" : `/strava/connect?return=${encodeURIComponent(`/activities${window.location.search || ''}`)}`}>
                 <Button>
                   <Activity className="h-4 w-4 mr-2" />
-                  Forbind til Strava
+                  {selectBase ? "Gå til Strava Success" : "Forbind til Strava"}
                 </Button>
               </Link>
             </CardContent>

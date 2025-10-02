@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getUserLeagues } from '@/lib/leagues';
 import { rpcGetActiveGameForLeague } from '@/lib/gamesApi';
+import { useQuery } from '@tanstack/react-query';
 
 export interface MyActiveGame {
   id: string;
@@ -25,13 +26,13 @@ export const useMyActiveGames = () => {
         const gamePromises = leagues.map(async (league) => {
           try {
             const activeGame = await rpcGetActiveGameForLeague(league.id);
-            if (activeGame && activeGame.id && activeGame.meta?.status === 'active') {
+            if (activeGame && activeGame.id && activeGame.status === 'active') {
               return {
                 id: activeGame.id,
-                name: activeGame.meta?.name || `Spil i ${league.name}`,
+                name: activeGame.name || `Spil i ${league.name}`,
                 leagueId: league.id,
                 leagueName: league.name,
-                timeLeftSeconds: activeGame.meta?.time_left_seconds || null,
+                timeLeftSeconds: activeGame.time_left_seconds || null,
               };
             }
             return null;

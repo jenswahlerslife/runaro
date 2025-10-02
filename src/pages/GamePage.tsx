@@ -49,11 +49,11 @@ function StravaConnectedButton({ gameId }: { gameId: string }) {
     if (hasStravaConnection === null || checkingStrava) return;
 
     if (!hasStravaConnection) {
-      navigate(`/strava/connect?return=${encodeURIComponent(`/activities?game=${gameId}&selectBase=1`)}`);
+      navigate(`/strava/connect?return=${encodeURIComponent(`/games/${gameId}/setup`)}`);
       return;
     }
 
-    navigate(`/activities?game=${gameId}&selectBase=1`);
+    navigate(`/games/${gameId}/setup`);
   };
 
   if (checkingStrava) {

@@ -42,7 +42,19 @@
       "Bash(del test_rls_fix.cjs)",
       "Bash(git push:*)",
       "Bash(del test-setup-game-visibility.cjs)",
-      "Bash(del test-rpc-direct.cjs)"
+      "Bash(del test-rpc-direct.cjs)",
+      "WebFetch(domain:localhost)",
+      "Bash(echo $VITE_ENABLE_DEBUG_ROUTES)",
+      "Bash(del test-oauth.js test-strava-callback.js)",
+      "Bash(npx eslint:*)",
+      "Bash(del \"supabase\\functions\\import-recent-activities\\index.ts\")",
+      "WebFetch(domain:runaro.pages.dev)",
+      "Bash(cmd /c:*)",
+      "Bash(del check-activities.cjs deploy-import-function.bat)",
+      "Bash(findstr:*)",
+      "Bash(del EDGE_FUNCTION_DEPLOYMENT.md)",
+      "Bash(if exist dist rmdir /s /q dist)",
+      "Bash(npx wrangler pages deploy:*)"
     ],
     "deny": [],
     "ask": []

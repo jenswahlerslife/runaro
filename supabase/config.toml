@@ -248,3 +248,13 @@ enabled = true
 # Use `oneshot` for hot reload, or `per_worker` for load testing.
 policy = "oneshot"
 inspector_port = 8083
+[functions.import-recent-activities]
+enabled = true
+verify_jwt = false
+import_map = "./functions/import-recent-activities/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/import-recent-activities/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/import-recent-activities/*.html" ]

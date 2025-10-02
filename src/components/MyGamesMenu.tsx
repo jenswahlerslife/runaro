@@ -96,3 +96,4 @@ export const MyGamesMenu = ({ variant = 'desktop' }: MyGamesMenuProps) => {
 };
 
 export default MyGamesMenu;
+

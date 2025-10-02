@@ -1,0 +1,195 @@
+{
+  "timestamp": "2025-10-02T13:08:19.586Z",
+  "type": "full-analysis",
+  "config": {
+    "project": "ojjpslrhyutizwpvvngu",
+    "url": "https://ojjpslrhyutizwpvvngu.supabase.co"
+  },
+  "data": {
+    "tables": [
+      {
+        "name": "profiles",
+        "rowCount": 7,
+        "hasData": true,
+        "structure": [
+          "id",
+          "user_id",
+          "role",
+          "created_at",
+          "updated_at",
+          "username",
+          "display_name",
+          "strava_access_token",
+          "strava_refresh_token",
+          "strava_athlete_id",
+          "strava_expires_at",
+          "total_points"
+        ]
+      },
+      {
+        "name": "activities",
+        "rowCount": 0,
+        "hasData": false,
+        "structure": []
+      },
+      {
+        "name": "leagues",
+        "rowCount": 1,
+        "hasData": true,
+        "structure": [
+          "id",
+          "name",
+          "description",
+          "invite_code",
+          "creator_id",
+          "season_start_date",
+          "season_end_date",
+          "created_at",
+          "updated_at",
+          "admin_user_id",
+          "is_public",
+          "max_members",
+          "created_by"
+        ]
+      },
+      {
+        "name": "league_memberships",
+        "rowCount": 2,
+        "hasData": true,
+        "structure": [
+          "league_id",
+          "user_id",
+          "role",
+          "joined_at"
+        ]
+      },
+      {
+        "name": "league_join_requests",
+        "rowCount": 0,
+        "hasData": false,
+        "structure": []
+      },
+      {
+        "name": "games",
+        "rowCount": 106,
+        "hasData": true,
+        "structure": [
+          "id",
+          "league_id",
+          "name",
+          "status",
+          "start_date",
+          "end_date",
+          "winner_user_id",
+          "created_at",
+          "created_by",
+          "duration_days",
+          "activated_at",
+          "finished_at"
+        ]
+      },
+      {
+        "name": "player_bases",
+        "rowCount": 0,
+        "hasData": false,
+        "structure": []
+      },
+      {
+        "name": "territory_ownership",
+        "rowCount": 0,
+        "hasData": false,
+        "structure": []
+      },
+      {
+        "name": "subscriptions",
+        "rowCount": 0,
+        "hasData": false,
+        "structure": []
+      },
+      {
+        "name": "error_reports",
+        "rowCount": 12,
+        "hasData": true,
+        "structure": [
+          "id",
+          "user_id",
+          "error_type",
+          "error_message",
+          "error_stack",
+          "url",
+          "user_agent",
+          "timestamp",
+          "severity",
+          "source",
+          "context",
+          "resolved",
+          "created_at"
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "get_user_leagues",
+        "status": "available",
+        "tested": true
+      },
+      {
+        "name": "create_league_with_owner",
+        "status": "available",
+        "tested": true
+      },
+      {
+        "name": "get_active_game_for_league",
+        "status": "available",
+        "tested": true
+      },
+      {
+        "name": "finish_due_games",
+        "status": "available",
+        "tested": true
+      }
+    ],
+    "performance": [
+      {
+        "name": "Profile query",
+        "duration_ms": 39,
+        "performance": "excellent"
+      },
+      {
+        "name": "League query",
+        "duration_ms": 42,
+        "performance": "excellent"
+      },
+      {
+        "name": "Complex RPC call",
+        "duration_ms": 42,
+        "performance": "excellent"
+      }
+    ],
+    "security": [
+      {
+        "name": "Profile RLS",
+        "accessible": true,
+        "rls_active": true
+      },
+      {
+        "name": "Sensitive data exposure",
+        "age_field_exists": null
+      }
+    ],
+    "dataIntegrity": [
+      {
+        "name": "Profile completeness",
+        "incomplete_profiles": 0
+      },
+      {
+        "name": "Game consistency",
+        "total_games": 106,
+        "statuses": [
+          "active",
+          "setup"
+        ]
+      }
+    ]
+  }
+}

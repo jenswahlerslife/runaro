@@ -6,7 +6,7 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
-  Content-Security-Policy: default-src 'none'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://js.stripe.com https://www.strava.com; script-src 'self' https://js.stripe.com 'nonce-runaro-script'; img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://unpkg.com https://cdnjs.cloudflare.com https://*.cartocdn.com; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'; frame-src https://js.stripe.com; base-uri 'none'; form-action 'self'; object-src 'none'; worker-src 'self'; manifest-src 'self'
+  Content-Security-Policy: default-src 'none'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://js.stripe.com https://www.strava.com; script-src 'self' https://js.stripe.com 'nonce-runaro-script'; img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://unpkg.com https://cdnjs.cloudflare.com https://*.cartocdn.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self'; frame-ancestors 'none'; frame-src https://js.stripe.com; base-uri 'none'; form-action 'self'; object-src 'none'; worker-src 'self'; manifest-src 'self'
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable, stale-while-revalidate=86400

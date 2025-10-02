@@ -4,9 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { toBase64Url } from '@/lib/oauth';
 
 const STRAVA_CLIENT_ID = '174654';
-const REDIRECT_URI = 'https://runaro.dk/auth/strava/callback'; // Server-side redirect til edge function
+const REDIRECT_URI = import.meta.env.PROD
+  ? 'https://runaro.dk/auth/strava/callback'
+  : 'http://localhost:8081/auth/strava/callback';
 
 interface StravaConnectProps {
   onConnected?: () => void;
@@ -18,10 +21,6 @@ const StravaConnect = ({ onConnected, returnUrl: propReturnUrl }: StravaConnectP
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const toBase64Url = (obj: Record<string, unknown>) => {
-    const json = JSON.stringify(obj);
-    return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  };
 
   const connectStrava = () => {
     if (!user) {
@@ -47,8 +46,8 @@ const StravaConnect = ({ onConnected, returnUrl: propReturnUrl }: StravaConnectP
 
       if (gameId) {
         returnUrl = import.meta.env.PROD
-          ? `https://runaro.dk/activities?game=${gameId}&selectBase=1`
-          : `${origin}/activities?game=${gameId}&selectBase=1`;
+          ? `https://runaro.dk/games/${gameId}/setup`
+          : `${origin}/games/${gameId}/setup`;
       }
     }
 

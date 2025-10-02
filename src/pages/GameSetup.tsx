@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithAuth } from "@/lib/function-helpers";
 import { useAuth } from "@/hooks/useAuth";
 import { rpcGetGameOverview, setPlayerBase } from "@/lib/gamesApi";
 import { getUserActivitiesWithTerritory } from "@/lib/territory";
@@ -71,6 +72,7 @@ export default function GameSetup() {
   // Match React Router route `/games/:gameId/setup`
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
   const [gameData, setGameData] = useState<any>(null);
@@ -79,20 +81,15 @@ export default function GameSetup() {
   const [error, setError] = useState<string | null>(null);
   const [settingBase, setSettingBase] = useState<string | null>(null);
   const [hasStravaConnection, setHasStravaConnection] = useState<boolean | null>(null);
+  const [importingActivities, setImportingActivities] = useState(false);
+
+  // Selected preview activity (by Strava activity id) controls the map focus via URL params
+  const selectedAid = searchParams.get("aid");
 
   // Derive status safely (may be undefined during initial renders)
   const gameStatus = gameData?.meta?.status as 'setup' | 'active' | 'finished' | 'cancelled' | undefined;
 
-  // Temporary: redirect all setup traffic to the stable Activities base-selection page.
-  // This avoids any rendering subtleties on this legacy page and unblocks users immediately.
-  useEffect(() => {
-    if (!gameId) return;
-    const to = `/activities?game=${gameId}&selectBase=1`;
-    // Only redirect if we're not already headed there
-    if (!window.location.pathname.startsWith('/activities')) {
-      navigate(to, { replace: true });
-    }
-  }, [gameId, navigate]);
+  // Removed redirect - GameSetup now handles base selection directly
 
   // IMPORTANT: Hooks must not be conditional. This effect must be declared
   // before any early returns so the hook order remains stable across renders.
@@ -270,7 +267,55 @@ export default function GameSetup() {
   };
 
   const handleConnectStrava = () => {
-    navigate(`/strava/connect?return=${encodeURIComponent(`/activities?game=${gameId}&selectBase=1`)}`);
+    navigate(`/strava/connect?return=${encodeURIComponent(`/games/${gameId}/setup`)}`);
+  };
+
+  const handleImportActivities = async () => {
+    setImportingActivities(true);
+    try {
+      // Use the helper function for proper JWT handling and error messages
+      const { data: result, error } = await invokeWithAuth<{
+        success: boolean;
+        inserted_count: number;
+        already_present: number;
+        total_running_activities: number;
+      }>('import-recent-activities', { limit: 20 });
+
+      if (error || !result?.success) {
+        throw new Error(result?.error || error?.message || 'Failed to import activities');
+      }
+
+      toast.success(
+        `Importerede ${result.inserted_count} nye aktiviteter (${result.already_present} allerede tilstede)`
+      );
+
+      // Reload activities
+      const userActivities = await getUserActivitiesWithTerritory();
+      setActivities(
+        userActivities.map((d: any) => ({
+          id: d.id,
+          name: d.name ?? "Unavngivet aktivitet",
+          distance: typeof d.distance === "number" ? d.distance : (d.distance ?? 0),
+          moving_time: d.moving_time ?? 0,
+          activity_type: d.activity_type ?? "Run",
+          start_date: d.start_date,
+          strava_activity_id: d.strava_activity_id,
+          is_base: d.is_base ?? false,
+          included_in_game: d.included_in_game ?? true,
+        }))
+      );
+    } catch (error: any) {
+      console.error('Error importing activities:', error);
+      toast.error(error.message || 'Kunne ikke importere aktiviteter');
+    } finally {
+      setImportingActivities(false);
+    }
+  };
+
+  // Preview a route on the map by updating query params the Map component listens to
+  const handlePreviewRoute = (stravaActivityId: number) => {
+    // Animate the route draw the first time a user clicks a card
+    setSearchParams({ aid: String(stravaActivityId), animate: "true" });
   };
 
   if (!user) {
@@ -421,16 +466,7 @@ export default function GameSetup() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="h-[500px] rounded-lg overflow-hidden">
-                {hasStravaConnection && activities.filter(a => a.included_in_game).length > 0 ? (
-                  <Map />
-                ) : (
-                  <div className="h-full flex items-center justify-center bg-gray-50">
-                    <div className="text-center">
-                      <MapIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-600">Map will appear when activities are loaded</p>
-                    </div>
-                  </div>
-                )}
+                <Map />
               </div>
             </CardContent>
           </Card>
@@ -464,27 +500,56 @@ export default function GameSetup() {
                     <CardContent className="py-8 text-center">
                       <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                       <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                        Ingen Territorium Aktiviteter Fundet
+                        Ingen Aktiviteter Fundet
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Forbind til Strava for at se dine aktiviteter og vælge din base
+                        Importer dine seneste løbeaktiviteter fra Strava for at vælge din base
                       </p>
-                      <Button onClick={handleConnectStrava}>
-                        <Activity className="h-4 w-4 mr-2" />
-                        Forbind til Strava
+                      <Button
+                        onClick={handleImportActivities}
+                        disabled={importingActivities}
+                        size="lg"
+                      >
+                        {importingActivities ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Importerer...
+                          </>
+                        ) : (
+                          <>
+                            <Activity className="h-4 w-4 mr-2" />
+                            Hent Aktiviteter
+                          </>
+                        )}
                       </Button>
                     </CardContent>
                   </Card>
                 ) : (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Activity className="h-5 w-5" />
-                        Vælg Din Base Aktivitet
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Vælg en aktivitet, der vil definere dit startterritorium og baseline dato
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Activity className="h-5 w-5" />
+                            Vælg Din Base Aktivitet
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            Vælg en aktivitet, der vil definere dit startterritorium og baseline dato
+                          </p>
+                        </div>
+                        <Button
+                          onClick={handleImportActivities}
+                          disabled={importingActivities}
+                          variant="outline"
+                          size="sm"
+                        >
+                          {importingActivities ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -493,7 +558,15 @@ export default function GameSetup() {
                           .map((activity) => (
                           <div
                             key={activity.id}
-                            className="p-4 border rounded-lg transition-colors hover:bg-gray-50"
+                            className={`p-4 border rounded-lg transition-all duration-200 ease-out cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:ring-2 hover:ring-blue-500/40 active:scale-[.99] ${
+                              selectedAid && String(activity.strava_activity_id) === selectedAid
+                                ? "ring-2 ring-blue-600 shadow-lg shadow-blue-600/10 bg-blue-50 dark:bg-blue-900/20"
+                                : ""
+                            }`}
+                            onClick={() => handlePreviewRoute(activity.strava_activity_id)}
+                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePreviewRoute(activity.strava_activity_id)}
+                            role="button"
+                            tabIndex={0}
                           >
                             <div className="space-y-3">
                               <div className="flex items-center gap-2">
@@ -525,7 +598,7 @@ export default function GameSetup() {
                                 </div>
                               </div>
                               <Button
-                                onClick={() => handleSetBase(activity.id)}
+                                onClick={(e) => { e.stopPropagation(); handleSetBase(activity.id); }}
                                 disabled={settingBase === activity.id}
                                 size="sm"
                                 className="w-full"

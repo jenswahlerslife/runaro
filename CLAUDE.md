@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 **Core Development:**
-- `npm run dev` - Start development server (runs on localhost:5173 by default via Vite)
+- `npm run dev` - Start development server (runs on localhost:8080 via Vite)
 - `npm run build` - Production build (uses cross-env ROLLUP_DISABLE_NATIVE=1)
 - `npm run build:dev` - Development build
 - `npm run lint` - Run ESLint
@@ -66,6 +66,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Use `/debug/strava` page for Strava integration testing
 - Production testing available at https://runaro.dk
 - Domain logic tests: Feature-based testing with domain service unit tests
+- Run single test file: `npm test <filename>` or `npm test <pattern>`
+- Run test in watch mode: `npm run test:watch <filename>`
 
 **Git & Sync:**
 - `npm run git:push` - Auto-commit and push changes
@@ -184,9 +186,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Development Notes
 
 **TypeScript Configuration:**
-- Relaxed settings: `noImplicitAny: false`, `strictNullChecks: false`
+- Strict mode enabled with comprehensive type safety (`strict: true`, `strictNullChecks: true`, `noImplicitAny: true`)
+- Additional safety: `exactOptionalPropertyTypes: true`, `noImplicitReturns: true`, `noUncheckedIndexedAccess: true`
 - Path aliases: `@/*` maps to `./src/*`
 - Base URL configured for absolute imports
+- Must handle nullable values explicitly due to strict null checks
+- Array indexing returns `type | undefined` - always check before use
 
 **Styling System:**
 - CSS custom properties for consistent theming
@@ -200,6 +205,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Domain separation**: Business logic separated from UI components
 - **Repository pattern**: Infrastructure layer with ports/adapters pattern
 - **Lazy loading**: Performance optimization with dynamic imports
+- **Migration in progress**: Moving from legacy `src/components/leagues/` to new `src/features/leagues/` architecture
 
 **Critical Files:**
 - `public/_redirects` - Essential for Strava OAuth callbacks on Cloudflare Pages
@@ -230,7 +236,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 When working on this codebase:
 
-1. **Run development server:** `npm run dev` (starts on localhost:5173 by default)
+1. **Run development server:** `npm run dev` (starts on localhost:8080 via Vite)
 2. **For database changes:** Use `npm run db:new` to create migration, then `npm run db:push` to deploy
 3. **For testing:** Run `npm test` or `npm run test:watch` for continuous testing
 4. **For Strava testing:** Use `/debug/strava` page for OAuth flow testing
@@ -238,6 +244,15 @@ When working on this codebase:
 6. **Before committing:** Always run `npm run lint`, `npm run type-check`, and `npm test`
 7. **Territory features require PostGIS** - ensure database has geospatial extensions enabled
 8. **Database setup:** Run `npm run db:setup` once to configure Supabase CLI connection
+9. **Strict TypeScript:** Code must satisfy strict type checking including null checks and indexed access
+10. **Component Development:** Uses lovable-tagger in development mode for component identification
+
+**Common Development Patterns:**
+- When adding new features, prefer extending existing feature modules in `src/features/`
+- For new UI components, check `src/shared/primitives/` before creating new ones
+- Database functions must follow security pattern: `SECURITY DEFINER` with locked `search_path`
+- Always use `UIProfileSelect` type when querying profiles to exclude sensitive data
+- Lazy load heavy components and pages using utilities in `src/utils/lazy-imports.ts`
 
 ## Profile Data Security
 
@@ -275,11 +290,14 @@ When working on this codebase:
 - Status monitoring via Wrangler CLI
 - Production URL: https://runaro.dk
 - Preview deployments: https://{deployment-id}.runaro.pages.dev
+- **Critical**: `public/_redirects` file required for Strava OAuth callbacks
+- Supports SPA routing with `/* /index.html 200` redirect rule
 
 **Cloudflare Workers:**
 - `runaro-game-finish-cron` - Automatic game finishing worker (runs every 5 minutes)
 - Separate wrangler configuration in `workers/wrangler.toml`
 - Uses environment variables and secrets for Supabase connection
+- Deployed independently from main application
 
 ## Database Security & Performance
 

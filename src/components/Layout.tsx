@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, Crown, Users, Gamepad2 } from 'lucide-react';
+import { LogOut, Crown, Gamepad2, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -50,7 +51,7 @@ const Layout = ({ children }: LayoutProps) => {
                   size="sm"
                 >
                   <Users className="h-4 w-4 mr-2" />
-                  Ligaer
+                  Dine ligaer
                 </Button>
               </Link>
               <Link to="/subscription">
@@ -94,6 +95,7 @@ const Layout = ({ children }: LayoutProps) => {
               <span className="text-xs mt-1">Dine spil</span>
             </Button>
           </Link>
+          
           <Link to="/leagues">
             <Button
               variant={isActive('/leagues') ? 'default' : 'ghost'}
@@ -104,6 +106,7 @@ const Layout = ({ children }: LayoutProps) => {
               <span className="text-xs mt-1">Ligaer</span>
             </Button>
           </Link>
+
           <Link to="/subscription">
             <Button
               variant={isActive('/subscription') ? 'default' : 'ghost'}

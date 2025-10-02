@@ -11,9 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Check, X, Users, Search, Crown, Shield, UserPlus, Trash2, ChevronUp, ChevronDown, Play, Trophy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { manageLeagueMembership } from '@/lib/leagues';
-import { rpcGetActiveGameForLeague } from '@/lib/gamesApi';
+import { manageLeagueMembership, getLatestSetupGame } from '@/lib/leagues';
+import { rpcGetActiveGameForLeague, rpcGetGameOverview } from '@/lib/gamesApi';
 import { formatDuration, intervalToDuration } from 'date-fns';
+import { SetupGameCard } from '@/features/leagues';
 
 interface Member {
   id: string;
@@ -71,6 +72,8 @@ export default function LeagueMembers() {
     end_at: string | null;
     time_left_seconds: number | null;
   }>(null);
+  const [setupGame, setSetupGame] = useState<any>(null);
+  const [setupGameStats, setSetupGameStats] = useState<{baseCount: number; memberCount: number} | null>(null);
 
   const { subscription, isPro } = useSubscription();
 
@@ -94,8 +97,34 @@ export default function LeagueMembers() {
             end_at: g.end_at ?? null,
             time_left_seconds: g.time_left_seconds ?? null,
           });
+          setSetupGame(null);
+          setSetupGameStats(null);
         } else if (!cancelled) {
           setActiveGame(null);
+
+          // No active game, check for setup game
+          try {
+            const setupGame = await getLatestSetupGame(leagueId);
+            if (setupGame) {
+              setSetupGame(setupGame);
+
+              // Get game stats for setup game
+              const gameOverview = await rpcGetGameOverview(setupGame.id);
+              if (gameOverview?.counts) {
+                setSetupGameStats({
+                  baseCount: gameOverview.counts.base_count || 0,
+                  memberCount: gameOverview.counts.member_count || 0
+                });
+              }
+            } else {
+              setSetupGame(null);
+              setSetupGameStats(null);
+            }
+          } catch (setupError) {
+            console.error("Failed to load setup game:", setupError);
+            setSetupGame(null);
+            setSetupGameStats(null);
+          }
         }
       } catch (e) {
         console.error("Failed to load active game:", e);
@@ -711,7 +740,7 @@ export default function LeagueMembers() {
                       onClick={() => {
                         const path =
                           activeGame.status === "setup"
-                            ? `/activities?game=${activeGame.id}&selectBase=1`
+                            ? `/games/${activeGame.id}/setup`
                             : `/games/${activeGame.id}`;
                         navigate(path);
                       }}
@@ -723,6 +752,16 @@ export default function LeagueMembers() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Setup Game Section */}
+          {!activeGame && setupGame && setupGameStats && (
+            <SetupGameCard
+              setupGame={setupGame}
+              baseCount={setupGameStats.baseCount}
+              memberCount={setupGameStats.memberCount}
+              onNavigateToSetup={() => navigate(`/games/${setupGame.id}/setup`)}
+            />
           )}
 
           {/* Join Requests Section (only for admins/owners) */}

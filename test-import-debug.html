@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Import Debug</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>Import Activities Debug</h1>
+  <button onclick="testImport()">Test Import (Check Console)</button>
+  <pre id="output"></pre>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://ojjpslrhyutizwpvvngu.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzAyNDUsImV4cCI6MjA3MTgwNjI0NX0.qsKY1YPBaphie0BwV71-kHcg73ZfKNuBUHR9yHO78zA'
+    );
+
+    async function testImport() {
+      const output = document.getElementById('output');
+      output.textContent = 'Testing...\n';
+
+      // 1. Check session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      output.textContent += `\n1. Session check:\n`;
+      output.textContent += `   Has session: ${!!session}\n`;
+      output.textContent += `   Has access_token: ${!!session?.access_token}\n`;
+      output.textContent += `   Token preview: ${session?.access_token?.substring(0, 30)}...\n`;
+      output.textContent += `   Session error: ${sessionError?.message || 'none'}\n`;
+
+      if (!session?.access_token) {
+        output.textContent += '\n❌ No session! User needs to sign in first.\n';
+        return;
+      }
+
+      // 2. Test manual fetch
+      output.textContent += `\n2. Manual fetch test:\n`;
+      try {
+        const response = await fetch('https://ojjpslrhyutizwpvvngu.supabase.co/functions/v1/import-recent-activities', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + session.access_token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ limit: 1 })
+        });
+
+        const text = await response.text();
+        output.textContent += `   Status: ${response.status}\n`;
+        output.textContent += `   Response: ${text}\n`;
+
+        if (response.status === 401) {
+          output.textContent += '\n❌ 401 from manual fetch - token invalid or function env misconfigured\n';
+        } else if (response.ok) {
+          output.textContent += '\n✅ Manual fetch worked! Issue is with functions.invoke\n';
+        }
+      } catch (err) {
+        output.textContent += `   Error: ${err.message}\n`;
+      }
+
+      // 3. Test functions.invoke
+      output.textContent += `\n3. functions.invoke test:\n`;
+      try {
+        const { data, error } = await supabase.functions.invoke('import-recent-activities', {
+          body: { limit: 1 },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+
+        output.textContent += `   Data: ${JSON.stringify(data, null, 2)}\n`;
+        output.textContent += `   Error: ${error ? JSON.stringify(error, null, 2) : 'none'}\n`;
+
+        if (error) {
+          output.textContent += '\n❌ functions.invoke failed\n';
+        } else {
+          output.textContent += '\n✅ functions.invoke worked!\n';
+        }
+      } catch (err) {
+        output.textContent += `   Exception: ${err.message}\n`;
+      }
+    }
+
+    // Auto-run on load if user is signed in
+    window.addEventListener('load', async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        document.getElementById('output').textContent = 'User is signed in. Click button to test.\n';
+      } else {
+        document.getElementById('output').textContent = '⚠️ No active session. Please sign in at /auth first.\n';
+      }
+    });
+  </script>
+</body>
+</html>

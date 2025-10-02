@@ -350,6 +350,28 @@ export async function getGamePlayerBases(gameId: string): Promise<PlayerBase[]> 
 }
 
 /**
+ * Gets the latest setup game for a league
+ */
+export async function getLatestSetupGame(leagueId: string): Promise<Game | null> {
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('league_id', leagueId)
+      .eq('status', 'setup')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching latest setup game:', error);
+    throw error;
+  }
+}
+
+/**
  * Gets current user's activities for base selection (after a certain date)
  */
 export async function getUserActivitiesForBase(afterDate?: string): Promise<any[]> {

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowLeft, Check, Crown, Users, Trophy, Calendar, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDate } from '@/lib/format';
 
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
@@ -88,10 +89,7 @@ export default function Subscription() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('da-DK');
-  };
+  // Using shared date formatter from lib/format
 
   return (
     <Layout>

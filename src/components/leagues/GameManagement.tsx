@@ -117,12 +117,12 @@ function StartGameCta({ gameId, gameStatus }: { gameId: string; gameStatus: stri
 
     if (!hasStravaConnection) {
       // User needs to connect Strava first - redirect to Strava connect then back to game setup
-      navigate(`/strava/connect?return=${encodeURIComponent(`/activities?game=${gameId}&selectBase=1`)}`);
+      navigate(`/strava/connect?return=${encodeURIComponent(`/games/${gameId}/setup`)}`);
       return;
     }
 
     // User has Strava connected - go directly to game setup for base selection
-    navigate(`/activities?game=${gameId}&selectBase=1`);
+    navigate(`/games/${gameId}/setup`);
   };
 
   if (gameStatus !== 'setup') return null;
@@ -239,7 +239,7 @@ export default function GameManagement({ leagueId, isAdmin, autoOpenCreate, open
       await loadGames();
 
       // Redirect to game setup for base selection
-    navigate(`/activities?game=${gameId}&selectBase=1`);
+    navigate(`/games/${gameId}/setup`);
     } catch (e: any) {
       console.error('Game creation failed:', e);
       const errorMessage = e.message || 'Kunne ikke oprette spil';
@@ -406,7 +406,7 @@ export default function GameManagement({ leagueId, isAdmin, autoOpenCreate, open
                     onClick={() => {
                       // For setup games, go to GameSetup for base selection
                       if (game.status === 'setup') {
-        navigate(`/activities?game=${game.id}&selectBase=1`);
+        navigate(`/games/${game.id}/setup`);
                       } else {
                         navigate(`/games/${game.id}`);
                       }

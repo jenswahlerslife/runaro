@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { fromBase64Url } from '@/lib/oauth';
 
 const StravaCallback = () => {
   const [searchParams] = useSearchParams();
@@ -16,30 +17,51 @@ const StravaCallback = () => {
       try {
         const code = searchParams.get('code');
         const state = searchParams.get('state');
-        const error = searchParams.get('error');
+        const authError = searchParams.get('error');
 
-        if (error) {
-          throw new Error(`Strava authorization failed: ${error}`);
+        if (authError) {
+          throw new Error(`Strava authorization failed: ${authError}`);
         }
 
         if (!code) {
           throw new Error('No authorization code received from Strava');
         }
 
-        console.log('Processing via server-side redirect (if _redirects is deployed) or fallback...');
-        
-        // This component should NOT be reached if _redirects is properly configured
-        // But we provide fallback behavior for development
-        if (window.location.hostname === 'localhost') {
-          // Local development fallback
-          const edgeFunctionUrl = `https://ojjpslrhyutizwpvvngu.supabase.co/functions/v1/strava-auth?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
-          console.log('Dev fallback - redirecting to:', edgeFunctionUrl);
-          window.location.href = edgeFunctionUrl;
-        } else {
-          // Production - should not reach here if _redirects is working
-          console.warn('WARN: StravaCallback reached on production. Check _redirects deployment.');
-          throw new Error('Server-side redirect not configured. Deploy _redirects file to Cloudflare Pages.');
+        console.log('Processing Strava callback via client-side function invoke...');
+
+        // Use client-side function invoke
+        const { data, error } = await supabase.functions.invoke('strava-auth', {
+          body: { code, state }
+        });
+
+        if (error) {
+          throw new Error(`Strava auth function error: ${error.message}`);
         }
+
+        console.log('Strava auth successful:', data);
+        setStatus('success');
+
+        // Decode state to get return URL
+        let returnUrl = '/strava/success'; // default
+        if (state) {
+          try {
+            const stateData = fromBase64Url(state);
+            if (stateData && stateData.returnUrl) {
+              // Sanitize returnUrl - only allow internal paths or runaro.dk
+              const url = stateData.returnUrl;
+              if (url.startsWith('/') || url.startsWith('https://runaro.dk')) {
+                returnUrl = url;
+              }
+            }
+          } catch (e) {
+            console.warn('Could not decode state:', e);
+          }
+        }
+
+        // Navigate to return URL using replace to prevent back navigation to callback
+        setTimeout(() => {
+          navigate(returnUrl, { replace: true });
+        }, 1500);
         
       } catch (error: any) {
         console.error('Strava callback error:', error);
