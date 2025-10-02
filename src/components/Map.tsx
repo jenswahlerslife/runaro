@@ -19,73 +19,20 @@ Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Calculate geographic center of coordinates (cache bust v2)
-const calculateCenter = (coords: [number, number][]): [number, number] => {
-  if (coords.length === 0) return [0, 0];
-
-  let sumLat = 0;
-  let sumLng = 0;
-
-  coords.forEach(([lat, lng]) => {
-    sumLat += lat;
-    sumLng += lng;
-  });
-
-  return [sumLat / coords.length, sumLng / coords.length];
-};
-
-// Calculate appropriate zoom level based on bounds
-const calculateZoomForBounds = (map: LeafletMap, bounds: LatLngBounds, padding = 50): number => {
-  const mapSize = map.getSize();
-  const nePx = map.project(bounds.getNorthEast(), 0);
-  const swPx = map.project(bounds.getSouthWest(), 0);
-
-  const boundsWidth = Math.abs(nePx.x - swPx.x);
-  const boundsHeight = Math.abs(nePx.y - swPx.y);
-
-  const availableWidth = mapSize.x - (padding * 2);
-  const availableHeight = mapSize.y - (padding * 2);
-
-  const scaleX = availableWidth / boundsWidth;
-  const scaleY = availableHeight / boundsHeight;
-  const scale = Math.min(scaleX, scaleY);
-
-  const zoom = Math.floor(Math.log2(scale));
-  return Math.max(10, Math.min(16, zoom)); // Clamp between 10-16
-};
-
-// Robust center-based focusing that ensures entire route is visible
+// Robust bounds fitting using Leaflet's native fitBounds (handles center+zoom)
 const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding = 100) => {
-  const doFocus = () => {
+  const rawBounds = new LatLngBounds(coords);
+  // Add extra margin around the geometry so it appears centered with space on all sides
+  const bounds = rawBounds.pad(0.18); // ~18% extra breathing room
+  const doFit = () => {
     map.invalidateSize();
-
-    // Calculate center point
-    const center = calculateCenter(coords);
-    console.log('[focusOnTerritory] Center calculated:', center);
-
-    // Calculate bounds
-    const bounds = new LatLngBounds(coords);
-    console.log('[focusOnTerritory] Bounds:', bounds.toBBoxString());
-
-    // Calculate zoom level that fits entire route
-    const zoom = calculateZoomForBounds(map, bounds, padding);
-    console.log('[focusOnTerritory] Calculated zoom:', zoom);
-
-    // Center the map
-    map.setView(center, zoom, { animate: true, duration: 0.5 });
+    console.log('[focusOnTerritory] Fitting padded bounds:', bounds.toBBoxString());
+    map.fitBounds(bounds, { padding: [padding, padding] });
   };
-
-  // Initial focus
-  doFocus();
-
-  // Re-focus after layout stabilizes
-  requestAnimationFrame(doFocus);
-
-  // Final focus after tiles load
-  setTimeout(doFocus, 100);
-
-  // Safety: re-focus on container resize
-  map.once('resize', doFocus);
+  doFit();
+  requestAnimationFrame(doFit);
+  setTimeout(doFit, 120);
+  map.once('resize', doFit);
 };
 
 // Animation function to show route from start to end, then show territory
@@ -105,8 +52,8 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
     opacity: 0.8
   }).addTo(map);
 
-  // Center on the route using new focus method
-  focusOnTerritory(map, routeCoords, 80);
+  // Focus to the full territory polygon for guaranteed in-frame view
+  focusOnTerritory(map, territory.polygon, 110);
 
   // Animate the route drawing
   const animationDuration = 2000; // 2 seconds
@@ -126,10 +73,8 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
   // Wait a moment, then remove the animated line and show the territory
   setTimeout(() => {
     map.removeLayer(animatedLine);
-    console.log('[Animation] Route animation complete, showing territory');
-
-    // Now zoom out slightly to show the territory area
-    focusOnTerritory(map, territory.polygon, 100);
+    console.log('[Animation] Route animation complete, ensuring territory in frame');
+    focusOnTerritory(map, territory.polygon, 110);
   }, 500);
 };
 
@@ -193,11 +138,11 @@ const MapController: React.FC<{
             const tb = new LatLngBounds(focusTerritory.polygon);
             onFocus?.(tb, 100, 15);
           } else if (focusTerritory.routeCoordinates && focusTerritory.routeCoordinates.length > 1) {
-            // Focus on route directly - centered and properly zoomed
-            console.log('[MapController] Focusing on route with', focusTerritory.routeCoordinates.length, 'points');
-            focusOnTerritory(map, focusTerritory.routeCoordinates, 80);
-            const routeBounds = new LatLngBounds(focusTerritory.routeCoordinates);
-            onFocus?.(routeBounds, 80, 15);
+          // Fit directly to the territory polygon (ensures complete in-frame view)
+          console.log('[MapController] Focusing directly on territory polygon');
+          const terrBounds = new LatLngBounds(focusTerritory.polygon);
+          focusOnTerritory(map, focusTerritory.polygon, 110);
+          onFocus?.(terrBounds, 110, 15);
           } else {
             // Focus on territory polygon
             console.log('[MapController] Focusing on territory polygon');
@@ -402,7 +347,10 @@ const Map: React.FC = () => {
     const opts = lastFitOptionsRef.current;
     if (!b || !opts) return;
     // Debounce: run shortly after a burst of tile loads
-    setTimeout(() => focusBounds(map, b, opts.padding, opts.maxZoom), 50);
+    setTimeout(() => {
+      map.invalidateSize();
+      map.fitBounds(b, { padding: [opts.padding, opts.padding] });
+    }, 50);
   };
 
   const handleLocate = () => {
