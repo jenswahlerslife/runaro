@@ -30,7 +30,9 @@ const MapPage = () => {
             Explore your area with privacy protection
           </p>
         </div>
-        <Map />
+        <div className="relative w-full min-h-[60vh] h-[70vh]">
+          <Map />
+        </div>
       </div>
     </Layout>
   );

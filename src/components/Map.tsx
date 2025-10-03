@@ -54,6 +54,13 @@ const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = 110) => {
 
     console.log('[FitManager] Fitting bounds:', bounds.toBBoxString());
     map.fitBounds(bounds, { padding: [padding, padding], animate: false });
+    // Ensure the focused area ends up centered after the fit completes
+    const center = bounds.getCenter();
+    requestAnimationFrame(() => {
+      if (fitGeneration === gen && anyMap?._mapPane) {
+        map.setView(center, Math.min(map.getZoom(), 16), { animate: false });
+      }
+    });
   };
 
   // Cancel any pending fit and schedule this one
@@ -397,7 +404,7 @@ const Map: React.FC = () => {
 
   if (!isClient) {
     return (
-      <div className="relative w-full min-h-[60vh] h-[70vh] rounded-lg overflow-hidden border border-border" />
+      <div className="relative w-full h-full rounded-lg overflow-hidden border border-border" />
     );
   }
 
@@ -433,8 +440,8 @@ const Map: React.FC = () => {
   }
 
   return (
-    <div className="w-full">
-      <div className="relative w-full min-h-[60vh] h-[70vh] rounded-lg overflow-hidden border border-border">
+    <div className="w-full h-full">
+      <div className="relative w-full h-full rounded-lg overflow-hidden border border-border">
         <MapContainer
           center={defaultCenter}
           zoom={10}
