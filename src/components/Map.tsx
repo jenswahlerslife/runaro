@@ -23,7 +23,12 @@ Icon.Default.mergeOptions({
 let fitGeneration = 0;
 let rafHandle: number | null = null;
 
-const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = 110) => {
+// Tuning: tighter fit while still showing full route
+const FIT_PIXEL_PADDING = 80; // previous 110
+const FIT_BOUNDS_PAD = 0.10;  // previous 0.18 (10% breathing room)
+const MAX_FOCUS_ZOOM = 16;
+
+const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = FIT_PIXEL_PADDING) => {
   const gen = ++fitGeneration;
 
   const run = () => {
@@ -53,12 +58,12 @@ const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = 110) => {
     }
 
     console.log('[FitManager] Fitting bounds:', bounds.toBBoxString());
-    map.fitBounds(bounds, { padding: [padding, padding], animate: false });
+    map.fitBounds(bounds, { padding: [padding, padding], animate: false, maxZoom: MAX_FOCUS_ZOOM });
     // Ensure the focused area ends up centered after the fit completes
     const center = bounds.getCenter();
     requestAnimationFrame(() => {
       if (fitGeneration === gen && anyMap?._mapPane) {
-        map.setView(center, Math.min(map.getZoom(), 16), { animate: false });
+        map.setView(center, Math.min(map.getZoom(), MAX_FOCUS_ZOOM), { animate: false });
       }
     });
   };
@@ -71,8 +76,8 @@ const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = 110) => {
 };
 
 // Simplified focus function using FitManager
-const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding = 110) => {
-  const bounds = new LatLngBounds(coords).pad(0.18); // 18% breathing room
+const focusOnTerritory = (map: LeafletMap, coords: [number, number][], padding = FIT_PIXEL_PADDING) => {
+  const bounds = new LatLngBounds(coords).pad(FIT_BOUNDS_PAD); // breathing room
   scheduleFit(map, bounds, padding);
 };
 
@@ -81,7 +86,7 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
   if (!territory.routeCoordinates || territory.routeCoordinates.length < 2) {
     console.warn('[Animation] No route coordinates available for animation');
     // Fallback to polygon-only fit
-    focusOnTerritory(map, territory.polygon, 110);
+    focusOnTerritory(map, territory.polygon);
     return;
   }
 
@@ -89,7 +94,7 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
   console.log('[Animation] Starting route animation with', routeCoords.length, 'points');
 
   // Focus to the full territory polygon ONCE at the start (no intermediate fits)
-  focusOnTerritory(map, territory.polygon, 110);
+  focusOnTerritory(map, territory.polygon);
 
   // Create a temporary polyline for animation
   const animatedLine = L.polyline([], {
@@ -169,11 +174,11 @@ const MapController: React.FC<{
         animateRouteAndShowTerritory(map, focusTerritory);
       } else {
         console.log('[MapController] Focusing directly on territory polygon');
-        focusOnTerritory(map, focusTerritory.polygon, 110);
+        focusOnTerritory(map, focusTerritory.polygon);
       }
 
       const bounds = new LatLngBounds(focusTerritory.polygon);
-      onFocus?.(bounds, 110, 15);
+      onFocus?.(bounds, FIT_PIXEL_PADDING, MAX_FOCUS_ZOOM);
       return; // Early return - do NOT fit all when focusing
     }
 
