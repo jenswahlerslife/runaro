@@ -24,7 +24,8 @@ let fitGeneration = 0;
 let rafHandle: number | null = null;
 
 // Tuning: tighter fit while still showing full route
-const FIT_PIXEL_PADDING = 80; // previous 110
+const FIT_PIXEL_PADDING = 80; // primary padding for initial fit
+const TIGHT_PIXEL_PADDING = 50; // follow-up pad for a touch more zoom
 const FIT_BOUNDS_PAD = 0.10;  // previous 0.18 (10% breathing room)
 const MAX_FOCUS_ZOOM = 16;
 
@@ -51,7 +52,14 @@ const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = FIT_PIXEL_
       map.whenReady(() => {
         if (fitGeneration === gen && anyMap._mapPane) {
           console.log('[FitManager] Fitting bounds after ready:', bounds.toBBoxString());
-          map.fitBounds(bounds, { padding: [padding, padding], animate: false });
+          map.fitBounds(bounds, { padding: [padding, padding], animate: false, maxZoom: MAX_FOCUS_ZOOM });
+          const center = bounds.getCenter();
+          const tighterZoom = map.getBoundsZoom(bounds, { padding: [TIGHT_PIXEL_PADDING, TIGHT_PIXEL_PADDING], maxZoom: MAX_FOCUS_ZOOM });
+          requestAnimationFrame(() => {
+            if (fitGeneration === gen && anyMap?._mapPane) {
+              map.setView(center, Math.min(tighterZoom, MAX_FOCUS_ZOOM), { animate: false });
+            }
+          });
         }
       });
       return;
@@ -59,11 +67,12 @@ const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = FIT_PIXEL_
 
     console.log('[FitManager] Fitting bounds:', bounds.toBBoxString());
     map.fitBounds(bounds, { padding: [padding, padding], animate: false, maxZoom: MAX_FOCUS_ZOOM });
-    // Ensure the focused area ends up centered after the fit completes
+    // Ensure the focused area ends up centered after the fit completes and slightly tighten zoom
     const center = bounds.getCenter();
+    const tighterZoom = map.getBoundsZoom(bounds, { padding: [TIGHT_PIXEL_PADDING, TIGHT_PIXEL_PADDING], maxZoom: MAX_FOCUS_ZOOM });
     requestAnimationFrame(() => {
       if (fitGeneration === gen && anyMap?._mapPane) {
-        map.setView(center, Math.min(map.getZoom(), MAX_FOCUS_ZOOM), { animate: false });
+        map.setView(center, Math.min(tighterZoom, MAX_FOCUS_ZOOM), { animate: false });
       }
     });
   };
@@ -100,7 +109,10 @@ const animateRouteAndShowTerritory = async (map: LeafletMap, territory: Territor
   const animatedLine = L.polyline([], {
     color: '#ef4444',
     weight: 4,
-    opacity: 0.8
+    opacity: 0.8,
+    lineJoin: 'round',
+    lineCap: 'round',
+    smoothFactor: 2
   }).addTo(map);
 
   // Animate the route drawing
@@ -451,6 +463,7 @@ const Map: React.FC = () => {
           center={defaultCenter}
           zoom={10}
           className="w-full h-full"
+          preferCanvas={true}
           zoomControl={true}
           attributionControl={false}
         >
@@ -504,12 +517,15 @@ const Map: React.FC = () => {
               <Polygon 
                 key={territory.id}
                 positions={territory.polygon}
+                smoothFactor={2}
                 pathOptions={{
                   color: '#111827',
                   weight: 2,
                   fillColor: focusActivityId === territory.stravaActivityId ? '#ef4444' : '#f97316',
                   fillOpacity: 0.35,
                   opacity: focusActivityId === territory.stravaActivityId ? 1 : 0.8,
+                  lineJoin: 'round',
+                  lineCap: 'round'
                 }}
               >
                 <Popup>

@@ -1,12 +1,13 @@
 import * as polyline from 'polyline';
-import polyline from 'polyline';
+import polylineDefault from 'polyline';
 export type LatLng = [number, number];
 
 export function decodePolylineToLatLngs(encoded: string): LatLng[] {
   if (!encoded) return [];
   
   try {
-    const decoded = polyline.decode(encoded);
+    // Use default export to satisfy various bundlers
+    const decoded = (polylineDefault?.decode ?? polyline.decode)(encoded);
     return decoded.map(([lat, lng]) => [lat, lng] as LatLng);
   } catch (error) {
     console.error('Error decoding polyline:', error);
@@ -55,6 +56,33 @@ export function closePolylineToPolygon(
   return line;
 }
 
+// Chaikin's corner-cutting to smooth polygon edges while preserving shape
+export function smoothPolygonChaikin(points: LatLng[], iterations: number = 2): LatLng[] {
+  if (!points || points.length < 4) return points;
+
+  const isClosed = points[0][0] === points[points.length - 1][0] && points[0][1] === points[points.length - 1][1];
+  let ring: LatLng[] = isClosed ? points.slice(0, -1) : points.slice();
+
+  // Guard against exploding point count: reduce iterations for very long rings
+  const iter = ring.length > 1500 ? 1 : Math.max(1, Math.min(iterations, 3));
+
+  for (let k = 0; k < iter; k++) {
+    const newPts: LatLng[] = [];
+    const n = ring.length;
+    for (let i = 0; i < n; i++) {
+      const p0 = ring[i];
+      const p1 = ring[(i + 1) % n];
+      const q: LatLng = [0.75 * p0[0] + 0.25 * p1[0], 0.75 * p0[1] + 0.25 * p1[1]];
+      const r: LatLng = [0.25 * p0[0] + 0.75 * p1[0], 0.25 * p0[1] + 0.75 * p1[1]];
+      newPts.push(q, r);
+    }
+    ring = newPts;
+  }
+
+  const closedRing = [...ring, ring[0]];
+  return closedRing;
+}
+
 export interface Territory {
   id: string;
   name: string;
@@ -93,18 +121,19 @@ export function createTerritoryFromActivity(
   }
   
   const polygon = closePolylineToPolygon(decodedLine);
-  console.log(`[Territory] Final polygon has ${polygon.length} points`);
+  const smoothed = smoothPolygonChaikin(polygon, 2);
+  console.log(`[Territory] Final polygon has ${smoothed.length} points (smoothed)`);
   
   // Log first and last few points to verify coordinate order
-  console.log(`[Territory] First point: [${polygon[0][0]}, ${polygon[0][1]}]`);
-  console.log(`[Territory] Last point: [${polygon[polygon.length-1][0]}, ${polygon[polygon.length-1][1]}]`);
+  console.log(`[Territory] First point: [${smoothed[0][0]}, ${smoothed[0][1]}]`);
+  console.log(`[Territory] Last point: [${smoothed[smoothed.length-1][0]}, ${smoothed[smoothed.length-1][1]}]`);
   
   return {
     id: activity.id,
     name: activity.name,
     activityType: activity.activity_type,
     stravaActivityId: activity.strava_activity_id,
-    polygon,
+    polygon: smoothed,
     routeCoordinates: decodedLine, // Store original route for animation
     createdAt: activity.created_at,
   };
