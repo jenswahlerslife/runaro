@@ -23,10 +23,10 @@ Icon.Default.mergeOptions({
 let fitGeneration = 0;
 let rafHandle: number | null = null;
 
-// Tuning: tighter fit while still showing full route
-const FIT_PIXEL_PADDING = 80; // primary padding for initial fit
-const TIGHT_PIXEL_PADDING = 50; // follow-up pad for a touch more zoom
-const FIT_BOUNDS_PAD = 0.10;  // previous 0.18 (10% breathing room)
+// Tuning: ensure full territory stays centered and visible
+// Slightly larger padding to avoid any cropping after fit
+const FIT_PIXEL_PADDING = 120; // pixel padding around territory when fitting
+const FIT_BOUNDS_PAD = 0.10;   // geographic padding (10% breathing room)
 const MAX_FOCUS_ZOOM = 16;
 
 const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = FIT_PIXEL_PADDING) => {
@@ -52,29 +52,18 @@ const scheduleFit = (map: LeafletMap, bounds: LatLngBounds, padding = FIT_PIXEL_
       map.whenReady(() => {
         if (fitGeneration === gen && anyMap._mapPane) {
           console.log('[FitManager] Fitting bounds after ready:', bounds.toBBoxString());
+          // Ensure Leaflet knows the actual container size before fitting
+          map.invalidateSize({ animate: false });
           map.fitBounds(bounds, { padding: [padding, padding], animate: false, maxZoom: MAX_FOCUS_ZOOM });
-          const center = bounds.getCenter();
-          const tighterZoom = map.getBoundsZoom(bounds, { padding: [TIGHT_PIXEL_PADDING, TIGHT_PIXEL_PADDING], maxZoom: MAX_FOCUS_ZOOM });
-          requestAnimationFrame(() => {
-            if (fitGeneration === gen && anyMap?._mapPane) {
-              map.setView(center, Math.min(tighterZoom, MAX_FOCUS_ZOOM), { animate: false });
-            }
-          });
         }
       });
       return;
     }
 
     console.log('[FitManager] Fitting bounds:', bounds.toBBoxString());
+    // Make sure size is up-to-date (container may have changed due to sidebar interactions)
+    map.invalidateSize({ animate: false });
     map.fitBounds(bounds, { padding: [padding, padding], animate: false, maxZoom: MAX_FOCUS_ZOOM });
-    // Ensure the focused area ends up centered after the fit completes and slightly tighten zoom
-    const center = bounds.getCenter();
-    const tighterZoom = map.getBoundsZoom(bounds, { padding: [TIGHT_PIXEL_PADDING, TIGHT_PIXEL_PADDING], maxZoom: MAX_FOCUS_ZOOM });
-    requestAnimationFrame(() => {
-      if (fitGeneration === gen && anyMap?._mapPane) {
-        map.setView(center, Math.min(tighterZoom, MAX_FOCUS_ZOOM), { animate: false });
-      }
-    });
   };
 
   // Cancel any pending fit and schedule this one
@@ -517,7 +506,7 @@ const Map: React.FC = () => {
               <Polygon 
                 key={territory.id}
                 positions={territory.polygon}
-                smoothFactor={2}
+                smoothFactor={3}
                 pathOptions={{
                   color: '#111827',
                   weight: 2,

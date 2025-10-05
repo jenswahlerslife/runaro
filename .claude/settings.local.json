@@ -54,7 +54,9 @@
       "Bash(findstr:*)",
       "Bash(del EDGE_FUNCTION_DEPLOYMENT.md)",
       "Bash(if exist dist rmdir /s /q dist)",
-      "Bash(npx wrangler pages deploy:*)"
+      "Bash(npx wrangler pages deploy:*)",
+      "Bash(code:*)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []

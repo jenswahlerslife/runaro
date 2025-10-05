@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 **Core Development:**
-- `npm run dev` - Start development server (runs on localhost:8080 via Vite)
+- `npm run dev` - Start development server (runs on localhost:5173 via Vite)
 - `npm run build` - Production build (uses cross-env ROLLUP_DISABLE_NATIVE=1)
 - `npm run build:dev` - Development build
 - `npm run lint` - Run ESLint
@@ -175,6 +175,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Activity-based territory expansion (running activities = territory claims)
 - Multiplayer leagues with competitive territory acquisition
 - GPX file processing for route-based territory creation
+- **Map Rendering Optimizations:**
+  - Progressive zoom levels with Chaikin smoothing algorithm for polygon rendering
+  - FitManager pattern to eliminate race conditions in map centering
+  - Explicit view setting with tighter bounds configuration
+  - Constants in `src/utils/territory.ts` for configurable rendering behavior
 
 ### Strava Integration
 - Complete OAuth 2.0 flow with secure state management
@@ -236,7 +241,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 When working on this codebase:
 
-1. **Run development server:** `npm run dev` (starts on localhost:8080 via Vite)
+1. **Run development server:** `npm run dev` (starts on localhost:5173 via Vite)
 2. **For database changes:** Use `npm run db:new` to create migration, then `npm run db:push` to deploy
 3. **For testing:** Run `npm test` or `npm run test:watch` for continuous testing
 4. **For Strava testing:** Use `/debug/strava` page for OAuth flow testing
@@ -360,12 +365,12 @@ Claude has full administrative access to the Supabase database with the followin
 - ✅ Real-time debugging and troubleshooting
 
 **Key Database Tables:**
-- `profiles` (7 rows) - User profiles with security controls
-- `leagues` (17 rows) - League management system
-- `games` (41 rows) - Game instances and states
-- `league_memberships` (6 rows) - User league relationships
-- `league_join_requests` (7 rows) - Pending membership requests
-- `error_reports` (12 rows) - System error logging
+- `profiles` - User profiles with security controls
+- `leagues` - League management system
+- `games` - Game instances and states
+- `league_memberships` - User league relationships
+- `league_join_requests` - Pending membership requests
+- `error_reports` - System error logging
 - `activities`, `player_bases`, `territory_ownership`, `subscriptions` - Feature tables
 
 **Security Notes:**
