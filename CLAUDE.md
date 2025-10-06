@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 **Core Development:**
-- `npm run dev` - Start development server (runs on localhost:5173 via Vite)
+- `npm run dev` - Start development server (runs on localhost:8080 via Vite)
 - `npm run build` - Production build (uses cross-env ROLLUP_DISABLE_NATIVE=1)
 - `npm run build:dev` - Development build
 - `npm run lint` - Run ESLint
@@ -210,7 +210,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Domain separation**: Business logic separated from UI components
 - **Repository pattern**: Infrastructure layer with ports/adapters pattern
 - **Lazy loading**: Performance optimization with dynamic imports
-- **Migration in progress**: Moving from legacy `src/components/leagues/` to new `src/features/leagues/` architecture
+- **Architecture evolution**: Gradually migrating from legacy component structure (`src/components/leagues/`) to new feature-based architecture (`src/features/leagues/`). Both coexist during transition - prefer new architecture for new features
 
 **Critical Files:**
 - `public/_redirects` - Essential for Strava OAuth callbacks on Cloudflare Pages
@@ -233,7 +233,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/pages/GameSetup.tsx` - Game base selection interface with Strava activity integration
 - `src/pages/StravaConnectPage.tsx` - Dedicated Strava connection interface
 - `src/utils/lazy-imports.ts` - Lazy loading utilities for performance optimization
-- `vitest.config.ts` - Test configuration with 70% coverage thresholds
+- `vitest.config.ts` - Vitest test configuration with 70% coverage thresholds and jsdom environment
+- `vite.config.ts` - Vite build configuration with SWC, component tagger, and path aliases
 - `workers/game-finish-cron.js` - Cloudflare Worker for automatic game completion
 - `workers/wrangler.toml` - Worker configuration with cron scheduling
 
@@ -241,7 +242,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 When working on this codebase:
 
-1. **Run development server:** `npm run dev` (starts on localhost:5173 via Vite)
+1. **Run development server:** `npm run dev` (starts on localhost:8080 via Vite)
 2. **For database changes:** Use `npm run db:new` to create migration, then `npm run db:push` to deploy
 3. **For testing:** Run `npm test` or `npm run test:watch` for continuous testing
 4. **For Strava testing:** Use `/debug/strava` page for OAuth flow testing
