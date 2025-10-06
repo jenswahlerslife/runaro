@@ -321,6 +321,13 @@ When working on this codebase:
 - Recent fixes ensure proper conflict resolution for membership view operations
 - All league operations secured with user-specific RLS policies
 
+**Auth Mapping (CRITICAL):**
+- CANONICAL RULE: `league_members.user_id` stores `profiles.id`, NOT `auth.uid()`
+- All database functions MUST map `auth.uid()` → `profiles.id` before membership checks
+- Reference: `docs/AUTH_MAPPING_GUIDE.md` for complete patterns and examples
+- Verification: Run `node scripts/schema-assertions/verify_functions.cjs` to check for broken patterns
+- Latest fixes: Migrations `20260101000006` (rollup) and `20260101000007` (RLS)
+
 ## Engine Requirements
 
 - **Node.js**: >= 18.0.0
