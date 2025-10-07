@@ -95,7 +95,15 @@ export async function createLeague(
       hint: error.hint,
       fullError: error
     });
-    throw error;
+    const message =
+      error.message ||
+      error.details ||
+      error.hint ||
+      'Kunne ikke oprette liga. Prøv igen.';
+    throw new Error(message);
+  }
+  if (!data) {
+    throw new Error('Serveren returnerede ingen liga-data.');
   }
   return data; // returns the league row
 }
