@@ -29,6 +29,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:push:remote` - Push migrations to remote with password and roles
 - `npm run functions:deploy` - Deploy Supabase Edge Functions
 
+**Migration Naming:**
+- Migration files follow pattern: `YYYYMMDDHHMISS_description.sql`
+- Use descriptive names that explain the change purpose
+- Current migration count: 140 files tracking complete schema evolution
+- Located in `supabase/migrations/` directory
+- Latest migrations focus on auth mapping and membership dual ID checks
+
 **Migration Testing & Monitoring:**
 - `npm run migration:test` - Run comprehensive database function testing
 - `npm run migration:validate` - Alias for migration:test
@@ -64,10 +71,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Test setup file: `src/test/setup.ts` with full browser API mocking
 - Coverage excludes: node_modules, test files, auto-generated types, Supabase types
 - Use `/debug/strava` page for Strava integration testing
+- HTML test suites: `test-strava-integration.html` and `FLOW_FIXED_TEST.html`
 - Production testing available at https://runaro.dk
 - Domain logic tests: Feature-based testing with domain service unit tests
 - Run single test file: `npm test <filename>` or `npm test <pattern>`
 - Run test in watch mode: `npm run test:watch <filename>`
+
+**Test File Organization:**
+- Test files located alongside source: `*.test.ts` or `*.test.tsx`
+- Domain logic tests in `src/features/*/domain/*.test.ts`
+- Test utilities and mocks in `src/test/`
+- Integration tests follow feature-based structure
 
 **Git & Sync:**
 - `npm run git:push` - Auto-commit and push changes
@@ -93,6 +107,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Workers & Cron:**
 - `workers/game-finish-cron.js` - Cloudflare Worker for automatic game finishing (runs every 5 minutes)
 - `workers/wrangler.toml` - Worker-specific configuration with cron triggers
+- Deploy worker: `cd workers && npx wrangler deploy`
 
 ## Architecture Overview
 
@@ -183,10 +198,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Strava Integration
 - Complete OAuth 2.0 flow with secure state management
+- State parameter stored in localStorage for OAuth security
+- Callback validates state before processing tokens
 - Activity import with filtering (running activities only)
 - Automatic point calculation and territory generation
 - Token refresh and persistent storage
-- Comprehensive debugging interface at `/debug/strava`
+- Tokens persisted in profiles table with automatic refresh
+- Comprehensive debugging tools:
+  - React interface: `/debug/strava`
+  - HTML test suite: `test-strava-integration.html`
+  - OAuth flow tester: `FLOW_FIXED_TEST.html`
 
 ### Development Notes
 
@@ -238,13 +259,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `workers/game-finish-cron.js` - Cloudflare Worker for automatic game completion
 - `workers/wrangler.toml` - Worker configuration with cron scheduling
 
+## Linux/WSL Development Setup
+
+**Cross-Platform Compatibility:**
+This project is fully compatible with Linux, macOS, and WSL (Windows Subsystem for Linux). All npm scripts have been updated to work cross-platform.
+
+**Quick Setup (Linux/WSL):**
+```bash
+# Automated setup (recommended)
+./scripts/linux-setup.sh
+
+# Or follow LINUX_SETUP.md for detailed instructions
+```
+
+**Key Improvements for Linux:**
+- ✅ All database commands use cross-platform Node.js script (`scripts/load-env.js`)
+- ✅ No PowerShell dependencies - replaced with Node.js environment loader
+- ✅ POSIX-style environment variables (`$VAR` instead of `%VAR%`)
+- ✅ Shell scripts with proper execute permissions
+- ✅ Native Supabase CLI support
+
+**WSL-Specific Notes:**
+- Project currently in `/mnt/c/` (Windows filesystem) - works but slower
+- For best performance, consider moving to Linux filesystem (`~/projects/`)
+- Dev server on port 8080 is auto-forwarded to Windows (accessible at `localhost:8080`)
+- Use VS Code "Remote - WSL" extension for seamless development
+- Verify WSL with: `uname -a` (should show `microsoft-standard-WSL2`)
+
+**Environment Variable Loading:**
+All `db:*`, `migration:*`, and `performance:*` commands automatically load `.env.local`:
+```bash
+# Old (Windows-only):
+npm run db:env && npx supabase migration list
+
+# New (cross-platform):
+npm run db:status  # Automatically loads .env.local via Node.js script
+```
+
 ## Development Workflow
 
 When working on this codebase:
 
-1. **Run development server:** `npm run dev` (starts on localhost:8080 via Vite)
+1. **Run development server:** `npm run dev` (starts on localhost:8080 via Vite - port explicitly configured in vite.config.ts)
+   - Automated setup scripts available:
+     - Linux/WSL: `./scripts/linux-setup.sh`
+     - Legacy Unix/Mac: `scripts/dev-setup.sh`
+   - **Note:** Default Vite port is 5173, but this project is configured to use 8080
 2. **For database changes:** Use `npm run db:new` to create migration, then `npm run db:push` to deploy
 3. **For testing:** Run `npm test` or `npm run test:watch` for continuous testing
+   - HTML test suites for Strava: `test-strava-integration.html` and `FLOW_FIXED_TEST.html`
 4. **For Strava testing:** Use `/debug/strava` page for OAuth flow testing
 5. **For deployment:** Use `npm run deploy:quick` for fastest deployment to Cloudflare
 6. **Before committing:** Always run `npm run lint`, `npm run type-check`, and `npm test`
@@ -257,8 +320,13 @@ When working on this codebase:
 - When adding new features, prefer extending existing feature modules in `src/features/`
 - For new UI components, check `src/shared/primitives/` before creating new ones
 - Database functions must follow security pattern: `SECURITY DEFINER` with locked `search_path`
+- **CRITICAL:** Always map `auth.uid()` → `profiles.id` before membership checks (see Auth Mapping section)
 - Always use `UIProfileSelect` type when querying profiles to exclude sensitive data
 - Lazy load heavy components and pages using utilities in `src/utils/lazy-imports.ts`
+- Use `useErrorReporting` hook for consistent error logging
+- Errors automatically sent to `error_reports` table for monitoring
+- Error dashboard available at `/error-dashboard` for debugging production issues
+- Run `node scripts/schema-assertions/verify_functions.cjs` after any database function changes
 
 ## Profile Data Security
 
@@ -280,9 +348,15 @@ When working on this codebase:
 - Edge Functions: Stripe webhooks, customer portal, checkout creation, error reporting, strava-activities, strava-auth, transfer-activity, finish-due-games, setup-database
 
 **Strava OAuth:**
-- Callbacks handled at `/auth/strava/callback`  
+- Callbacks handled at `/auth/strava/callback`
+- State parameter stored in localStorage for OAuth security
+- Callback validates state before processing tokens
+- Tokens persisted in profiles table with automatic refresh
 - Debug interface at `/debug/strava`
 - Production callbacks require `public/_redirects` file
+- Additional HTML test suites available:
+  - `test-strava-integration.html` - Comprehensive integration testing
+  - `FLOW_FIXED_TEST.html` - OAuth flow verification
 
 **Stripe Integration:**
 - Subscription billing and payment processing
@@ -326,13 +400,94 @@ When working on this codebase:
 - All database functions MUST map `auth.uid()` → `profiles.id` before membership checks
 - Reference: `docs/AUTH_MAPPING_GUIDE.md` for complete patterns and examples
 - Verification: Run `node scripts/schema-assertions/verify_functions.cjs` to check for broken patterns
-- Latest fixes: Migrations `20260101000006` (rollup) and `20260101000007` (RLS)
+- Latest fixes:
+  - Migration `20260101000006` - Post-V2 rollup with auth mapping corrections
+  - Migration `20260101000007` - Games RLS policies fix
+  - Migration `20260101000008` - get_game_overview admin/member access fix
+  - Migration `20260101000009` - Membership dual ID checks (active focus area)
+- **Recent Focus:** Ensuring consistent auth mapping across all game functions and membership checks
 
 ## Engine Requirements
 
 - **Node.js**: >= 18.0.0
 - **npm**: >= 9.0.0
 - **Package Manager**: npm@10.9.2 (configured via packageManager field)
+
+## WSL Development Setup (Windows)
+
+**Why Use WSL:**
+- Native Linux environment for all tools and scripts
+- Better performance for file system operations
+- Consistent behavior with production environment
+- AI extensions (Claude Code, Copilot) work seamlessly
+
+**🚀 AUTOMATIC SETUP (Recommended):**
+
+**Option 1: Full Automated Setup (PowerShell)**
+```powershell
+# Right-click on setup-wsl-auto.ps1 → Run with PowerShell
+# OR in PowerShell terminal:
+.\setup-wsl-auto.ps1
+```
+This script will:
+- ✅ Check and install WSL + Ubuntu
+- ✅ Install VS Code WSL extension
+- ✅ Run complete environment setup (Node.js, dependencies, etc.)
+- ✅ Open VS Code in WSL mode automatically
+
+**Option 2: Quick Open (Batch File)**
+```batch
+# Double-click: open-in-wsl.bat
+# OR in Command Prompt:
+open-in-wsl.bat
+```
+Opens VS Code in WSL mode immediately. Then run setup inside VS Code terminal.
+
+**Manual Setup (If Automatic Fails):**
+
+1. **Open Project in WSL:**
+   - Press `Ctrl + Shift + P` in VS Code
+   - Type: `WSL: Open Folder in WSL`
+   - Select `Ubuntu` distribution
+   - Browse to your project folder
+   - Look for `WSL: Ubuntu` in bottom-left blue bar
+
+2. **Run Setup Script:**
+   ```bash
+   # Inside WSL terminal
+   ./scripts/wsl-setup.sh
+   ```
+
+3. **Or Manual Install:**
+   ```bash
+   sudo apt update && sudo apt install -y \
+     git build-essential curl wget \
+     nodejs npm python3 python3-pip
+   npm ci
+   npm run db:setup
+   ```
+
+4. **Verify Linux Environment:**
+   ```bash
+   uname -a
+   # Should show: Linux ... microsoft-standard-WSL2
+   ```
+
+**Automatic Configuration:**
+- `.vscode/settings.json` - Pre-configured with WSL settings
+- `.devcontainer/devcontainer.json` - Auto-loads WSL environment on project open
+- Extensions automatically load in WSL context
+
+**Key Features:**
+- Terminal integration with shell commands
+- File watcher optimizations (no polling needed)
+- AI assistants (Claude Code, Copilot) work natively
+- All npm scripts execute in Linux environment
+
+**Troubleshooting:**
+- If extensions don't load: `Ctrl + Shift + P` → `Remote-WSL: Reopen Folder in WSL`
+- If terminal is wrong: Check bottom-left bar shows `WSL: Ubuntu`
+- If paths break: Ensure you opened the folder via `WSL: Open Folder in WSL`
 
 ## Claude Code Full Access Configuration
 
