@@ -35,3 +35,18 @@ build
 *.njsproj
 *.sln
 *.sw?
+
+# Windows artifacts
+*.exe
+*.dll
+*.pdb
+Thumbs.db
+
+# Build artifacts
+coverage/
+*.tsbuildinfo
+
+# Python build files (if using PyInstaller)
+build/
+dist/
+*.spec
