@@ -6,6 +6,7 @@ import { Play, Gamepad2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UIProfileSelect } from '@/types/ui';
+import { BlogPreviewSection } from '@/components/blog/BlogPreviewSection';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -123,6 +124,9 @@ const Index = () => {
             </Button>
           </div>
         </div>
+
+        {/* Blog Preview */}
+        <BlogPreviewSection />
 
       </div>
     </Layout>

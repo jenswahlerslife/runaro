@@ -30,6 +30,10 @@ import AuthDebugPage from "./pages/AuthDebugPage";
 import MyGamesPage from "./pages/MyGamesPage";
 import DiagnosticImport from "./pages/DiagnosticImport";
 import FunctionHealthCheck from "./pages/FunctionHealthCheck";
+import BlogIndex from "./pages/BlogIndex";
+import BlogPostPage from "./pages/BlogPostPage";
+import BlogAdminDashboard from "./pages/BlogAdminDashboard";
+import BlogEditorPage from "./pages/BlogEditorPage";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +58,11 @@ const App = () => (
             <Route path="/leagues" element={<LeaguesPage />} />
             <Route path="/leagues/:leagueId/members" element={<LeagueMembers />} />
             <Route path="/subscription" element={<Subscription />} />
+            <Route path="/blog" element={<BlogIndex />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/admin/blog" element={<BlogAdminDashboard />} />
+            <Route path="/admin/blog/new" element={<BlogEditorPage />} />
+            <Route path="/admin/blog/:id" element={<BlogEditorPage />} />
             <Route
               path="/games/:gameId/setup"
               element={
