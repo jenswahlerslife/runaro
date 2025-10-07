@@ -15,15 +15,20 @@ export async function rpcGetGameOverview(gameId: string) {
   return data as {
     meta: {
       id: string;
+      league_id: string;
+      name: string;
       status: "setup" | "active" | "finished" | "cancelled";
       duration_days: number | null;
       start_date: string | null;
       end_date: string | null;
       activated_at: string | null;
       winner_user_id: string | null;
+      time_left_seconds: number | null;
+      member_count: number;
+      bases_set: number;
     };
     counts: { member_count: number; base_count: number };
-    leaderboard: { user_id: string; area_km2: number }[];
+    leaderboard: { user_id: string; username: string; area_km2: number }[];
   };
 }
 

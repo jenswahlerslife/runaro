@@ -253,7 +253,20 @@ export default function GameSetup() {
           navigate(`/games/${gameId}`);
         }, 2000);
       } else {
-        toast.info(`Base sat. Venter på at ${activationResult?.member_count - activationResult?.players_with_bases} flere spillere sætter deres baser.`);
+        const memberCount = activationResult?.member_count ?? gameData?.counts?.member_count ?? 0;
+        const playersWithBases = activationResult?.players_with_bases ?? gameData?.counts?.base_count ?? 0;
+        const remaining = Math.max(0, memberCount - playersWithBases);
+        console.debug('Base set activation status', {
+          memberCount,
+          playersWithBases,
+          remaining,
+          rawActivationResult: activationResult
+        });
+        toast.info(
+          remaining > 0
+            ? `Base sat. Venter på at ${remaining} flere spillere sætter deres baser.`
+            : "Base sat. Afventer spilaktivering fra serveren."
+        );
         // Reload game data to update UI
         const overview = await rpcGetGameOverview(gameId);
         setGameData(overview);
