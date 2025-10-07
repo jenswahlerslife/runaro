@@ -1,0 +1,95 @@
+#!/bin/bash
+# Quick Reference for Linux/WSL Development
+# Source this file for helpful aliases and functions
+
+# Color output
+alias runaro-info='echo -e "\033[0;32m✅ Runaro Quick Commands:\033[0m"'
+
+# Show quick commands
+runaro-help() {
+    echo ""
+    echo "🚀 Runaro Development Quick Reference (Linux/WSL)"
+    echo "================================================"
+    echo ""
+    echo "📋 Core Development:"
+    echo "  npm run dev          - Start dev server (localhost:8080)"
+    echo "  npm test             - Run tests"
+    echo "  npm run lint         - Run linter"
+    echo "  npm run type-check   - Check TypeScript types"
+    echo "  npm run build        - Production build"
+    echo ""
+    echo "🗄️  Database Operations:"
+    echo "  npm run db:status    - Check migration status"
+    echo "  npm run db:push      - Deploy migrations"
+    echo "  npm run db:pull      - Pull remote schema"
+    echo "  npm run db:new       - Create new migration"
+    echo ""
+    echo "🚢 Deployment:"
+    echo "  npm run deploy:quick - Build + deploy to Cloudflare"
+    echo "  npm run cf:status    - Check deployment status"
+    echo ""
+    echo "🔧 Utilities:"
+    echo "  runaro-check         - Quick health check"
+    echo "  runaro-clean         - Clean and reinstall dependencies"
+    echo "  runaro-env           - Show environment status"
+    echo ""
+}
+
+# Quick health check
+runaro-check() {
+    echo "🔍 Running Runaro health check..."
+    echo ""
+
+    echo "Node.js version:"
+    node -v
+
+    echo ""
+    echo "npm version:"
+    npm -v
+
+    echo ""
+    echo "Environment file:"
+    if [ -f .env.local ]; then
+        echo "✅ .env.local exists"
+    else
+        echo "❌ .env.local missing"
+    fi
+
+    echo ""
+    echo "Supabase CLI:"
+    if command -v supabase &> /dev/null; then
+        supabase --version
+    else
+        echo "❌ Supabase CLI not installed"
+    fi
+
+    echo ""
+    echo "TypeScript check:"
+    npm run type-check --silent && echo "✅ No type errors" || echo "❌ Type errors found"
+}
+
+# Clean and reinstall
+runaro-clean() {
+    echo "🧹 Cleaning project..."
+    rm -rf node_modules package-lock.json
+    echo "📦 Reinstalling dependencies..."
+    npm ci
+    echo "✅ Clean install complete!"
+}
+
+# Show environment status
+runaro-env() {
+    echo "🔐 Environment Status:"
+    echo ""
+    if [ -f .env.local ]; then
+        echo "Environment variables in .env.local:"
+        grep -v "^#" .env.local | grep -v "^$" | cut -d'=' -f1 | while read key; do
+            echo "  ✅ $key"
+        done
+    else
+        echo "❌ .env.local not found"
+    fi
+}
+
+# Auto-show help on source
+runaro-help
