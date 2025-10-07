@@ -86,8 +86,17 @@ export async function createLeague(
     p_is_public: isPublic,
     p_max_members: maxMembers
   });
-  
-  if (error) throw error;
+
+  if (error) {
+    console.error('League creation error:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      fullError: error
+    });
+    throw error;
+  }
   return data; // returns the league row
 }
 
