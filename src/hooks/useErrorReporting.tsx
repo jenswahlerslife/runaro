@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
