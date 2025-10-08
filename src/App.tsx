@@ -30,10 +30,10 @@ import AuthDebugPage from "./pages/AuthDebugPage";
 import MyGamesPage from "./pages/MyGamesPage";
 import DiagnosticImport from "./pages/DiagnosticImport";
 import FunctionHealthCheck from "./pages/FunctionHealthCheck";
-import BlogIndex from "./pages/BlogIndex";
-import BlogPostPage from "./pages/BlogPostPage";
-import BlogAdminDashboard from "./pages/BlogAdminDashboard";
-import BlogEditorPage from "./pages/BlogEditorPage";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import AdminBlog from "./pages/AdminBlog";
+import AdminBlogEditor from "./pages/AdminBlogEditor";
 
 const queryClient = new QueryClient();
 
@@ -58,11 +58,11 @@ const App = () => (
             <Route path="/leagues" element={<LeaguesPage />} />
             <Route path="/leagues/:leagueId/members" element={<LeagueMembers />} />
             <Route path="/subscription" element={<Subscription />} />
-            <Route path="/blog" element={<BlogIndex />} />
-            <Route path="/blog/:slug" element={<BlogPostPage />} />
-            <Route path="/admin/blog" element={<BlogAdminDashboard />} />
-            <Route path="/admin/blog/new" element={<BlogEditorPage />} />
-            <Route path="/admin/blog/:id" element={<BlogEditorPage />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/admin/blog" element={<AdminBlog />} />
+            <Route path="/admin/blog/opret" element={<AdminBlogEditor />} />
+            <Route path="/admin/blog/rediger/:id" element={<AdminBlogEditor />} />
             <Route
               path="/games/:gameId/setup"
               element={

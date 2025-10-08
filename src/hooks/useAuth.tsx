@@ -20,6 +20,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<SignInResponse>;
   signUp: (email: string, password: string, username: string, displayName: string, age: number) => Promise<SignUpResponse>;
   signInWithMagicLink: (email: string) => Promise<SignInResponse>;
@@ -86,6 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -105,16 +107,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         clearTimeout(loadingTimeout);
         console.log('Auth state change:', event, session?.user?.id || 'no user');
-        
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
+
         // Run profile creation in background (non-blocking)
         if (session?.user) {
-          ensureProfileExists(session.user).catch(err => 
+          ensureProfileExists(session.user).catch(err =>
             console.warn('Background profile creation failed:', err)
           );
+          // Check admin status
+          checkAdminStatus(session.user.id);
+        } else {
+          setIsAdmin(false);
         }
       }
     );
@@ -134,12 +140,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-        
+
         // Run profile creation in background (non-blocking)
         if (session?.user) {
-          ensureProfileExists(session.user).catch(err => 
+          ensureProfileExists(session.user).catch(err =>
             console.warn('Background profile creation failed:', err)
           );
+          // Check admin status
+          checkAdminStatus(session.user.id);
+        } else {
+          setIsAdmin(false);
         }
       })
       .catch((error) => {
@@ -155,6 +165,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  const checkAdminStatus = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!error && data) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -248,6 +273,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     session,
     loading,
+    isAdmin,
     signIn,
     signUp,
     signInWithMagicLink,

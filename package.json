@@ -31,8 +31,10 @@
     "cf:dev": "node cloudflare-dev.js",
     "cf:status": "npx wrangler pages deployment list --project-name runaro",
     "cf:logs": "npx wrangler pages deployment tail --project-name runaro",
-    "deploy": "node deploy.js",
-    "deploy:quick": "npm run build && npm run cf:deploy",
+    "deploy": "npm run build && npm run deploy:wrangler",
+    "deploy:quick": "npm run deploy",
+    "deploy:wrangler": "npx wrangler pages deploy dist --project-name runaro --commit-dirty=true",
+    "deploy:production": "npm run build && npm run deploy:wrangler",
     "db:status": "node scripts/load-env.cjs 'npx supabase migration list'",
     "db:push": "node scripts/load-env.cjs 'npx supabase db push'",
     "db:pull": "node scripts/load-env.cjs 'npx supabase db pull'",
@@ -48,6 +50,8 @@
     "migration:validate": "npm run migration:test",
     "migration:health": "node scripts/load-env.cjs 'node scripts/migration-test-framework.cjs'",
     "performance:monitor": "node scripts/performance-monitor.cjs",
+    "blog:assign-admin": "node scripts/assign-admin-role.cjs",
+    "blog:create-test": "node scripts/create-test-post.cjs",
     "performance:track": "npm run performance:monitor",
     "db:performance": "node scripts/load-env.cjs 'node scripts/performance-monitor.cjs'",
     "v2:export": "node scripts/v2-schema-export.cjs",
@@ -113,6 +117,7 @@
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
+    "react-easy-crop": "^5.5.3",
     "react-hook-form": "^7.61.1",
     "react-leaflet": "^4.2.1",
     "react-markdown": "^10.1.0",
@@ -157,6 +162,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^0.34.0"
+    "vitest": "^0.34.0",
+    "wrangler": "^3.78.0"
   }
 }

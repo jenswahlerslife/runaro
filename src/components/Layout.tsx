@@ -1,22 +1,24 @@
 import { ReactNode } from 'react';
-import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { LogOut, Crown, Gamepad2, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface LayoutProps {
   children: ReactNode;
+  backgroundClassName?: string;
+  mainClassName?: string;
 }
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, backgroundClassName, mainClassName }: LayoutProps) => {
   const { signOut } = useAuth();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background", backgroundClassName)}>
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center md:gap-x-16 lg:gap-x-24">
           {/* Left navigation - now empty */}
@@ -78,7 +80,7 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className={cn("container mx-auto px-4 py-6", mainClassName)}>
         {children}
       </main>
 

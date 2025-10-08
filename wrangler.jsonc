@@ -1,0 +1,31 @@
+// Wrangler Configuration for Runaro
+// Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  // Project configuration
+  "name": "runaro",
+
+  // Cloudflare Pages specific
+  "pages_build_output_dir": "dist",
+
+  // Compatibility
+  "compatibility_date": "2025-10-08",
+
+  // Account (automatically selected from wrangler login)
+  // "account_id": "45ae1aa085ebaf8c78509f4ff3a31007",
+
+  // Environment variables (non-sensitive only)
+  // Sensitive vars should be set via: npx wrangler pages secret put <KEY>
+  "vars": {
+    "NODE_ENV": "production"
+  },
+
+  // Deploy configuration
+  "deploy": {
+    "project_name": "runaro"
+  },
+
+  // Build configuration (optional - we use Vite)
+  // "build": {
+  //   "command": "npm run build"
+  // }
+}

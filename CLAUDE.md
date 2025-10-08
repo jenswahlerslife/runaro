@@ -54,11 +54,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run v2:rollback-dry` - Test rollback procedures in dry-run mode
 
 **Deployment & Cloudflare:**
-- `npm run deploy` - Full deployment script
-- `npm run deploy:quick` - Quick build and deploy to Cloudflare
-- `npm run cf:deploy` - Deploy to Cloudflare Pages
+- `npm run deploy` - Build and deploy to Cloudflare via Wrangler (recommended)
+- `npm run deploy:quick` - Alias for deploy
+- `npm run deploy:wrangler` - Deploy dist/ to Cloudflare Pages (no build)
+- `npm run deploy:production` - Full production deployment (build + deploy)
 - `npm run cf:status` - Check Cloudflare deployment status
 - `npm run cf:logs` - View Cloudflare deployment logs
+- **Note:** Wrangler authentication required (run `npx wrangler login` once)
 
 **Testing:**
 - `npm test` - Run Vitest test suite
@@ -88,6 +90,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run git:status` - Check git status
 - `npm run sync` - Auto-sync with remote
 - `npm run sync:message` - Sync with custom commit message
+
+**Blog Administration:**
+- `npm run blog:assign-admin [email]` - Assign admin role to user
+- `npm run blog:create-test` - Create a test blog post
 
 **Secrets Management:**
 - `npm run secrets:list` - List all Supabase secrets

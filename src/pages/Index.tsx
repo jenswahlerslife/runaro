@@ -3,69 +3,10 @@ import { Navigate, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Play, Gamepad2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { UIProfileSelect } from '@/types/ui';
 import { BlogPreviewSection } from '@/components/blog/BlogPreviewSection';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [userProfile, setUserProfile] = useState<UIProfileSelect | null>(null);
-
-  // Fetch user profile data when user is available
-  useEffect(() => {
-    if (user) {
-      const fetchUserProfile = async () => {
-        try {
-          // Use maybeSingle to handle case where profile doesn't exist yet
-          const { data: prof, error } = await supabase
-            .from('profiles')
-            .select('username, display_name')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.warn('Error fetching user profile:', error);
-          }
-
-          // Set the profile data (might be null)
-          setUserProfile(prof);
-
-          // Self-heal: if profile doesn't exist, create one based on user metadata
-          if (!prof && user) {
-            console.log('Profile missing for user, creating self-heal profile...');
-            try {
-              await supabase.from('profiles').upsert({
-                id: user.id,  // Use 'id' not 'user_id'
-                user_id: user.id,  // Keep user_id in sync for compatibility
-                username: user.user_metadata?.username ?? null,
-                display_name: user.user_metadata?.display_name ?? null,
-                // age is handled by the database trigger from metadata
-              }, { onConflict: 'id' });  // Use 'id' as conflict target
-              
-              // Refetch after creation
-              const { data: newProf } = await supabase
-                .from('profiles')
-                .select('username, display_name')
-                .eq('user_id', user.id)
-                .maybeSingle();
-              
-              if (newProf) {
-                setUserProfile(newProf);
-                console.log('Self-heal profile created successfully');
-              }
-            } catch (healError) {
-              console.warn('Self-heal profile creation failed (non-blocking):', healError);
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to fetch user profile:', err);
-        }
-      };
-
-      fetchUserProfile();
-    }
-  }, [user]);
 
   if (loading) {
     return (
@@ -82,52 +23,44 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Get username with proper fallback as specified:
-  // profiles.username → auth.user_metadata.username → profiles.display_name → auth.user_metadata.display_name → email-prefix → "gæst"
-  const displayName = userProfile?.username 
-    || user?.user_metadata?.username 
-    || userProfile?.display_name 
-    || user?.user_metadata?.display_name 
-    || user?.email?.split('@')[0] 
-    || 'gæst';
-
   return (
-    <Layout>
-      <div className="space-y-8">
-        {/* Welcome Message */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-foreground mb-4">
-            Velkommen {displayName}!
-          </h1>
-        </div>
-
-        {/* Hero Section with Background */}
-        <div 
-          className="relative h-96 rounded-lg overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center"
-        >
-          <div className="absolute inset-0 bg-black/20"></div>
-          <div className="relative z-10 text-center space-y-6 text-white">
-            <div className="flex items-center justify-center mb-4">
-              <Gamepad2 className="h-16 w-16 text-white mr-4" />
-              <h1 className="text-5xl font-bold tracking-tight">
-                Territorielt Spil
-              </h1>
+    <Layout
+      backgroundClassName="bg-[#050818]"
+      mainClassName="px-4 py-16 md:py-20"
+    >
+      <div className="flex flex-col items-center gap-16 pb-12">
+        <section className="w-full max-w-5xl">
+          <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-[#2959ff] via-[#394eff] to-[#8e2dff] p-10 shadow-[0_52px_120px_-50px_rgba(51,95,255,0.85)]">
+            <div className="absolute inset-0 bg-black/10 mix-blend-overlay" aria-hidden />
+            <div className="relative flex flex-col items-center gap-6 text-center text-white">
+              <div className="flex items-center justify-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+                  <Gamepad2 className="h-7 w-7" />
+                </div>
+                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                  Territorielt Spil
+                </h1>
+              </div>
+              <p className="max-w-2xl text-lg text-white/90 sm:text-xl">
+                Konkurrér med venner i territoriale kampe ved hjælp af dine løberuter. Udvid dit territorium og erobr kortet!
+              </p>
+              <Button
+                size="lg"
+                asChild
+                className="px-8 py-3 text-lg font-semibold text-primary-foreground shadow-lg shadow-blue-900/40"
+              >
+                <Link to="/leagues">
+                  <Play className="mr-2 h-5 w-5" />
+                  Start Spil
+                </Link>
+              </Button>
             </div>
-            <p className="text-xl max-w-2xl mx-auto">
-              Konkurrér med venner i territoriale kampe ved hjælp af dine løberuter. Udvid dit territorium og erobr kortet!
-            </p>
-            <Button size="lg" asChild className="text-lg px-8 py-3">
-              <Link to="/leagues">
-                <Play className="h-6 w-6 mr-2" />
-                Start Spil
-              </Link>
-            </Button>
           </div>
-        </div>
+        </section>
 
-        {/* Blog Preview */}
-        <BlogPreviewSection />
-
+        <section className="w-full max-w-6xl">
+          <BlogPreviewSection />
+        </section>
       </div>
     </Layout>
   );

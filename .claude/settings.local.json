@@ -80,7 +80,12 @@
       "Bash(sudo -S bash -c 'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo \"\"\"\"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main\"\"\"\" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null')",
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git reset:*)",
+      "Bash(git log:*)",
+      "Bash(npx wrangler@3.78.0 pages deploy dist --project-name runaro)",
+      "Bash(npx wrangler:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
