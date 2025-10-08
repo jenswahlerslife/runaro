@@ -113,6 +113,6 @@ vi.mock('react-router-dom', async () => {
     useNavigate: vi.fn(),
     useParams: vi.fn(),
     useLocation: vi.fn(() => ({ pathname: '/' })),
-    Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a>
+    Link: vi.fn(({ children }) => children)
   };
 });

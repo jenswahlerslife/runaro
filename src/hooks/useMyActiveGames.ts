@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { getUserLeagues } from '@/lib/leagues';
 import { rpcGetActiveGameForLeague } from '@/lib/gamesApi';
-import { useQuery } from '@tanstack/react-query';
 
 export interface MyActiveGame {
   id: string;

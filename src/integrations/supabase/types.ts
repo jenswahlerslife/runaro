@@ -508,20 +508,14 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_posts_author_id"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
           created_at: string | null
           display_name: string | null
+          email: string | null
+          full_name: string | null
           id: string
           is_blog_admin: boolean | null
           role: string | null
@@ -537,6 +531,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           display_name?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: string
           is_blog_admin?: boolean | null
           role?: string | null
@@ -552,6 +548,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           display_name?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: string
           is_blog_admin?: boolean | null
           role?: string | null

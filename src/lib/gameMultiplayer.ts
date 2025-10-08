@@ -44,14 +44,14 @@ export async function calculatePlayerTerritory(
   tolerance: number = 50
 ): Promise<TerritoryCalculationResult> {
   try {
-    const { data, error } = await supabase.rpc('calculate_player_territory', {
+    const { data, error } = await supabase.rpc('calculate_player_territory' as any, {
       p_game_id: gameId,
       p_user_id: userId,
       p_tolerance_m: tolerance
     });
 
     if (error) throw error;
-    return data;
+    return data as TerritoryCalculationResult;
   } catch (error) {
     console.error('Error calculating player territory:', error);
     return {
@@ -131,12 +131,12 @@ export async function recalculateGameTerritories(
  */
 export async function getGameLeaderboard(gameId: string): Promise<LeaderboardEntry[]> {
   try {
-    const { data, error } = await supabase.rpc('get_game_leaderboard', {
+    const { data, error } = await supabase.rpc('get_game_leaderboard' as any, {
       p_game_id: gameId
     });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as LeaderboardEntry[];
   } catch (error) {
     console.error('Error fetching game leaderboard:', error);
     throw error;
@@ -153,7 +153,7 @@ export async function finishGame(gameId: string): Promise<GameFinishResult> {
     });
 
     if (error) throw error;
-    return data;
+    return data as GameFinishResult;
   } catch (error) {
     console.error('Error finishing game:', error);
     return {

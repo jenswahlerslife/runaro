@@ -175,7 +175,7 @@ export default function GameManagement({ leagueId, isAdmin, autoOpenCreate, open
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGames(data || []);
+      setGames((data || []) as Game[]);
     } catch (error) {
       console.error('Error loading games:', error);
       toast.error('Failed to load games');
