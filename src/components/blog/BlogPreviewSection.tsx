@@ -6,6 +6,22 @@ import { BlogPost, fetchPublishedBlogPosts } from "@/lib/blogApi";
 import { BlogPostCard } from "./BlogPostCard";
 import { Search } from "lucide-react";
 
+const PREVIEW_LIMIT = 4;
+const SKELETON_PLACEHOLDER_COUNT = PREVIEW_LIMIT;
+const EMPTY_STATE_MESSAGE = {
+  default: "Ingen opslag endnu. Kig snart tilbage for nye historier.",
+  filtered: "Ingen opslag matcher din søgning endnu.",
+} as const;
+
+const matchesSearchQuery = (post: BlogPost, query: string) => {
+  const q = query.toLowerCase();
+  return (
+    post.title.toLowerCase().includes(q) ||
+    post.excerpt.toLowerCase().includes(q) ||
+    post.tags.some((tag) => tag.toLowerCase().includes(q))
+  );
+};
+
 export const BlogPreviewSection = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,17 +48,10 @@ export const BlogPreviewSection = () => {
   }, []);
 
   const filteredPosts = useMemo(() => {
-    const limit = 4;
-    if (!searchQuery) return posts.slice(0, limit);
-    const q = searchQuery.toLowerCase();
-    return posts
-      .filter(
-        (post) =>
-          post.title.toLowerCase().includes(q) ||
-          post.excerpt.toLowerCase().includes(q) ||
-          post.tags.some((tag) => tag.toLowerCase().includes(q))
-      )
-      .slice(0, limit);
+    if (!searchQuery) {
+      return posts.slice(0, PREVIEW_LIMIT);
+    }
+    return posts.filter((post) => matchesSearchQuery(post, searchQuery)).slice(0, PREVIEW_LIMIT);
   }, [posts, searchQuery]);
 
   return (
@@ -70,12 +79,8 @@ export const BlogPreviewSection = () => {
                 className="border-white/10 bg-white/5 pl-9 text-slate-100 placeholder:text-slate-500 focus-visible:ring-offset-0"
               />
             </div>
-            <Button
-              variant="secondary"
-              asChild
-              className="bg-white text-slate-900 hover:bg-white/90"
-            >
-              <Link to="/">Tilbage til forsiden</Link>
+            <Button variant="secondary" asChild className="bg-white text-slate-900 hover:bg-white/90">
+              <Link to="/blog">Se alle historier</Link>
             </Button>
           </div>
         </header>
@@ -83,7 +88,7 @@ export const BlogPreviewSection = () => {
         <div className="mt-12">
           {loading ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, idx) => (
+              {Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, idx) => (
                 <div
                   key={idx}
                   className="h-64 animate-pulse rounded-2xl bg-slate-900/80"
@@ -96,9 +101,7 @@ export const BlogPreviewSection = () => {
             </div>
           ) : filteredPosts.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-700 px-4 py-10 text-center text-sm text-slate-400">
-              {searchQuery
-                ? "Ingen opslag matcher din søgning endnu."
-                : "Ingen opslag endnu. Kig snart tilbage for nye historier."}
+              {searchQuery ? EMPTY_STATE_MESSAGE.filtered : EMPTY_STATE_MESSAGE.default}
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">

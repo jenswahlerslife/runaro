@@ -1,125 +1,154 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Navigate, Link, useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/components/ui/use-toast';
-import { ArrowLeft, Plus, Users, Trophy, Key, Crown, Clock, Play, Bell } from 'lucide-react';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
-import LeagueDirectory from '@/components/leagues/LeagueDirectory';
-import { createLeague, joinLeague, getUserLeagues, type League } from '@/lib/leagues';
-import { rpcGetActiveGameForLeague } from '@/lib/gamesApi';
-import AdminRequestPanel from '@/components/leagues/AdminRequestPanel';
-import GameManagement from '@/components/leagues/GameManagement';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate, Link, useNavigate } from "react-router-dom";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { ArrowLeft, Plus, Users, Trophy, Key, Crown, Clock, Play } from "lucide-react";
+import LeagueDirectory from "@/components/leagues/LeagueDirectory";
+import { createLeague, joinLeague, getUserLeagues, type League } from "@/lib/leagues";
+import { rpcGetActiveGameForLeague } from "@/lib/gamesApi";
+import GameManagement from "@/components/leagues/GameManagement";
 
-export default function LeaguesPage() {
+type ActiveLeagueGame = NonNullable<Awaited<ReturnType<typeof rpcGetActiveGameForLeague>>>;
+type ActiveGamesMap = Record<string, ActiveLeagueGame>;
+
+interface NewLeagueForm {
+  name: string;
+  description: string;
+  isPublic: boolean;
+  maxMembers: number;
+}
+
+const MIN_LEAGUE_MEMBERS = 2;
+const DEFAULT_MAX_MEMBERS = 3;
+const PRO_MAX_MEMBERS = 50;
+const PENDING_BADGE_LIMIT = 9;
+
+const createDefaultLeagueForm = (): NewLeagueForm => ({
+  name: "",
+  description: "",
+  isPublic: true,
+  maxMembers: DEFAULT_MAX_MEMBERS,
+});
+
+const formatPendingCount = (count: number) =>
+  count > PENDING_BADGE_LIMIT ? `${PENDING_BADGE_LIMIT}+` : `${count}`;
+
+const getGameNavigationPath = (game: ActiveLeagueGame) =>
+  game.status === "setup" ? `/games/${game.id}/setup` : `/games/${game.id}`;
+
+const LeaguesPage = () => {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   const [leagues, setLeagues] = useState<League[]>([]);
+  const [activeGames, setActiveGames] = useState<ActiveGamesMap>({});
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [gameDialogOpen, setGameDialogOpen] = useState(false);
-  const [requestPanelOpen, setRequestPanelOpen] = useState(false);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
-  const [selectedLeagueName, setSelectedLeagueName] = useState<string>('');
-  const [activeGames, setActiveGames] = useState<Record<string, any>>({});
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
+  const [newLeague, setNewLeague] = useState<NewLeagueForm>(() => createDefaultLeagueForm());
+  const [inviteCode, setInviteCode] = useState("");
 
-  // Filter admin leagues based on is_admin property from the RPC
-  const adminLeagues = (leagues ?? []).filter(league => league.is_admin);
+  const selectedLeague = useMemo(
+    () => leagues.find((league) => league.id === selectedLeagueId),
+    [leagues, selectedLeagueId],
+  );
 
-  const [newLeague, setNewLeague] = useState({
-    name: '',
-    description: '',
-    isPublic: true,
-    maxMembers: 3
-  });
+  const showErrorToast = useCallback(
+    (title: string, description: string) => {
+      toast({ title, description, variant: "destructive" });
+    },
+    [toast],
+  );
 
-  const [inviteCode, setInviteCode] = useState('');
+  const showSuccessToast = useCallback(
+    (title: string, description?: string) => {
+      toast({ title, description });
+    },
+    [toast],
+  );
 
-  const fetchActiveGames = useCallback(async (leagues: League[]) => {
-    const games: Record<string, any> = {};
+  const updateLeagueForm = useCallback(
+    <Field extends keyof NewLeagueForm>(field: Field, value: NewLeagueForm[Field]) => {
+      setNewLeague((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
-    for (const league of leagues) {
-      try {
-        const activeGame = await rpcGetActiveGameForLeague(league.id);
-        if (activeGame && (activeGame as any).id) {
-          games[league.id] = activeGame;
-        }
-      } catch (error) {
-        console.error(`Error fetching active game for league ${league.id}:`, error);
-      }
+  const resetLeagueForm = useCallback(() => {
+    setNewLeague(createDefaultLeagueForm());
+  }, []);
+
+  const fetchActiveGames = useCallback(async (targetLeagues: League[]) => {
+    if (targetLeagues.length === 0) {
+      setActiveGames({});
+      return;
     }
 
-    setActiveGames(games);
+    const entries = await Promise.all(
+      targetLeagues.map(async (league) => {
+        try {
+          const activeGame = await rpcGetActiveGameForLeague(league.id);
+          return activeGame ? ([league.id, activeGame] as const) : null;
+        } catch (error) {
+          console.error(`Error fetching active game for league ${league.id}:`, error);
+          return null;
+        }
+      }),
+    );
+
+    const nextActiveGames = entries.reduce<ActiveGamesMap>((acc, entry) => {
+      if (entry) {
+        const [leagueId, game] = entry;
+        acc[leagueId] = game;
+      }
+      return acc;
+    }, {});
+
+    setActiveGames(nextActiveGames);
   }, []);
 
   const fetchLeagues = useCallback(async () => {
+    setLoading(true);
     try {
       const userLeagues = await getUserLeagues();
-      setLeagues(userLeagues || []);
-
-      // Also fetch active games for each league
-      await fetchActiveGames(userLeagues || []);
+      setLeagues(userLeagues);
+      await fetchActiveGames(userLeagues);
     } catch (error) {
-      console.error('Error fetching leagues:', error);
-      toast({
-        title: "Fejl ved indlæsning af ligaer",
-        description: String(error),
-        variant: "destructive",
-      });
+      showErrorToast("Fejl ved indlæsning af ligaer", String(error));
     } finally {
       setLoading(false);
     }
-  }, [toast, fetchActiveGames]);
-
-
-
-
-
-  // Get total pending requests count for all admin leagues
-  const { data: totalPendingCount = 0 } = useQuery({
-    queryKey: ['admin-pending-count'],
-    queryFn: async () => {
-      if ((adminLeagues ?? []).length === 0) return 0;
-      
-      let totalCount = 0;
-      for (const league of (adminLeagues ?? [])) {
-        const { data, error } = await supabase.rpc('get_admin_pending_requests_count', {
-          league_id: league.id
-        });
-        if (!error && typeof data === 'number') {
-          totalCount += data;
-        }
-      }
-      return totalCount;
-    },
-    enabled: (adminLeagues ?? []).length > 0,
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
+  }, [fetchActiveGames, showErrorToast]);
 
   useEffect(() => {
-    // Only fetch leagues after authentication is confirmed and user exists
     if (!authLoading && user) {
       fetchLeagues();
     }
   }, [authLoading, user, fetchLeagues]);
 
-
-  // Early returns after all hooks are defined
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -131,77 +160,53 @@ export default function LeaguesPage() {
   }
 
   const handleCreateLeague = async () => {
-    if (!newLeague.name.trim()) {
-      toast({
-        title: "Navn påkrævet",
-        description: "Indtast venligst et navn til ligaen",
-        variant: "destructive",
-      });
+    const trimmedName = newLeague.name.trim();
+
+    if (!trimmedName) {
+      showErrorToast("Navn påkrævet", "Indtast venligst et navn til ligaen");
       return;
     }
 
     try {
       const league = await createLeague(
-        newLeague.name,
-        newLeague.description || undefined,
+        trimmedName,
+        newLeague.description.trim() || undefined,
         newLeague.isPublic,
-        newLeague.maxMembers
+        newLeague.maxMembers,
       );
 
-      toast({
-        title: "Liga oprettet!",
-        description: `Invitationskode: ${league.invite_code}`,
-      });
+      showSuccessToast("Liga oprettet!", `Invitationskode: ${league.invite_code}`);
       setCreateDialogOpen(false);
-      setNewLeague({ name: '', description: '', isPublic: true, maxMembers: 3 });
-      fetchLeagues();
+      resetLeagueForm();
+      await fetchLeagues();
     } catch (error) {
-      toast({
-        title: "Fejl ved oprettelse af liga",
-        description: String(error),
-        variant: "destructive",
-      });
+      showErrorToast("Fejl ved oprettelse af liga", String(error));
     }
   };
 
   const handleJoinLeague = async () => {
-    if (!inviteCode.trim()) {
-      toast({
-        title: "Invitationskode påkrævet",
-        description: "Indtast venligst en invitationskode",
-        variant: "destructive",
-      });
+    const trimmedCode = inviteCode.trim();
+
+    if (!trimmedCode) {
+      showErrorToast("Invitationskode påkrævet", "Indtast venligst en invitationskode");
       return;
     }
 
     try {
-      const result = await joinLeague(inviteCode.trim());
+      const result = await joinLeague(trimmedCode);
 
       if (result.success) {
-        toast({
-          title: "Tilmeldt liga!",
-          description: `${result.league_name} - Status: ${result.status}`,
-        });
+        showSuccessToast("Tilmeldt liga!", `${result.league_name} - Status: ${result.status}`);
         setJoinDialogOpen(false);
-        setInviteCode('');
-        fetchLeagues();
+        setInviteCode("");
+        await fetchLeagues();
       } else {
-        toast({
-          title: "Fejl ved tilmelding til liga",
-          description: result.error,
-          variant: "destructive",
-        });
+        showErrorToast("Fejl ved tilmelding til liga", result.error ?? "Prøv igen senere.");
       }
     } catch (error) {
-      toast({
-        title: "Fejl ved tilmelding til liga",
-        description: String(error),
-        variant: "destructive",
-      });
+      showErrorToast("Fejl ved tilmelding til liga", String(error));
     }
   };
-
-
 
   const openGameDialog = (leagueId: string) => {
     setSelectedLeagueId(leagueId);
@@ -212,55 +217,75 @@ export default function LeaguesPage() {
     const activeGame = activeGames[league.id];
 
     if (activeGame) {
-      // Navigate to existing game
-      const gameId = activeGame.id;
-      const gameStatus = activeGame.status || 'setup';
-
-      const path = gameStatus === 'setup'
-        ? `/games/${gameId}/setup`
-        : `/games/${gameId}`;
-
-      navigate(path);
-    } else {
-      // No game exists, open create dialog
-      openGameDialog(league.id);
+      navigate(getGameNavigationPath(activeGame));
+      return;
     }
+
+    openGameDialog(league.id);
   };
 
-  const openRequestPanel = (leagueId: string, leagueName: string) => {
-    setSelectedLeagueId(leagueId);
-    setSelectedLeagueName(leagueName);
-    setRequestPanelOpen(true);
-  };
-
-  const openRequestPanelForAll = () => {
-    // For multi-league admin panel, use first admin league as primary
-    if ((adminLeagues ?? []).length > 0) {
-      setSelectedLeagueId(adminLeagues[0].id);
-      setSelectedLeagueName('Alle ligaer');
-      setRequestPanelOpen(true);
+  const renderGameAction = (league: League, activeGame: ActiveLeagueGame | undefined) => {
+    if (activeGame && activeGame.status === "setup") {
+      return (
+        <Button
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            navigate(getGameNavigationPath(activeGame));
+          }}
+          className="flex-1"
+        >
+          <Play className="h-4 w-4 mr-1" />
+          Start Game
+        </Button>
+      );
     }
-  };
 
-  if (loading) {
+    if (league.is_admin) {
+      return (
+        <Button
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleGameButtonClick(league);
+          }}
+          className="flex-1"
+        >
+          <Play className="h-4 w-4 mr-1" />
+          {activeGame ? "Gå til spillet" : "Games"}
+        </Button>
+      );
+    }
+
+    if (activeGame) {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={(event) => {
+            event.stopPropagation();
+            navigate(getGameNavigationPath(activeGame));
+          }}
+          className="flex-1"
+        >
+          <Trophy className="h-4 w-4 mr-1" />
+          Vis Spil
+        </Button>
+      );
+    }
+
     return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Trophy className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Indlæser ligaer...</p>
-          </div>
-        </div>
-      </Layout>
+      <Button size="sm" variant="outline" disabled className="flex-1">
+        <Clock className="h-4 w-4 mr-1" />
+        Afventer spil
+      </Button>
     );
-  }
+  };
 
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="space-y-6">
-          {/* Back button */}
           <div className="flex justify-start">
             <Link to="/">
               <Button variant="outline" size="sm">
@@ -270,7 +295,6 @@ export default function LeaguesPage() {
             </Link>
           </div>
 
-          {/* Centered Title */}
           <div className="text-center">
             <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
               <Trophy className="h-8 w-8 text-primary" />
@@ -281,7 +305,6 @@ export default function LeaguesPage() {
             </p>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 justify-center">
             <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
               <DialogTrigger asChild>
@@ -303,7 +326,7 @@ export default function LeaguesPage() {
                     <Input
                       id="inviteCode"
                       value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value)}
+                      onChange={(event) => setInviteCode(event.target.value)}
                       placeholder="Indtast invitationskode"
                     />
                   </div>
@@ -337,7 +360,7 @@ export default function LeaguesPage() {
                     <Input
                       id="name"
                       value={newLeague.name}
-                      onChange={(e) => setNewLeague({ ...newLeague, name: e.target.value })}
+                      onChange={(event) => updateLeagueForm("name", event.target.value)}
                       placeholder="Indtast liga navn"
                     />
                   </div>
@@ -346,7 +369,7 @@ export default function LeaguesPage() {
                     <Input
                       id="description"
                       value={newLeague.description}
-                      onChange={(e) => setNewLeague({ ...newLeague, description: e.target.value })}
+                      onChange={(event) => updateLeagueForm("description", event.target.value)}
                       placeholder="Liga beskrivelse"
                     />
                   </div>
@@ -355,13 +378,20 @@ export default function LeaguesPage() {
                     <Input
                       id="maxMembers"
                       type="number"
-                      min="2"
-                      max="50"
+                      min={MIN_LEAGUE_MEMBERS}
+                      max={PRO_MAX_MEMBERS}
                       value={newLeague.maxMembers}
-                      onChange={(e) => setNewLeague({ ...newLeague, maxMembers: parseInt(e.target.value) || 3 })}
+                      onChange={(event) => {
+                        const parsed = Number.parseInt(event.target.value, 10);
+                        updateLeagueForm(
+                          "maxMembers",
+                          Number.isNaN(parsed) ? DEFAULT_MAX_MEMBERS : parsed,
+                        );
+                      }}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Gratis plan: maks 3 medlemmer. Pro plan: op til 50 medlemmer.
+                      Gratis plan: maks {DEFAULT_MAX_MEMBERS} medlemmer. Pro plan: op til{" "}
+                      {PRO_MAX_MEMBERS} medlemmer.
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -369,7 +399,7 @@ export default function LeaguesPage() {
                       type="checkbox"
                       id="isPublic"
                       checked={newLeague.isPublic}
-                      onChange={(e) => setNewLeague({ ...newLeague, isPublic: e.target.checked })}
+                      onChange={(event) => updateLeagueForm("isPublic", event.target.checked)}
                       className="rounded border-gray-300"
                     />
                     <Label htmlFor="isPublic" className="text-sm">
@@ -388,9 +418,14 @@ export default function LeaguesPage() {
           </div>
         </div>
 
-
-        {/* Leagues Grid */}
-        {(leagues ?? []).length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <Trophy className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
+              <p className="text-muted-foreground">Indlæser ligaer...</p>
+            </div>
+          </div>
+        ) : leagues.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
               <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -398,190 +433,153 @@ export default function LeaguesPage() {
                 Ingen ligaer fundet
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Create a new league or join an existing one to start competing
+                Opret en ny liga eller deltag i en eksisterende for at komme i gang.
               </p>
               <div className="flex gap-2 justify-center">
-                <Button onClick={() => setCreateDialogOpen(true)}>
-                  Create League
-                </Button>
+                <Button onClick={() => setCreateDialogOpen(true)}>Opret Liga</Button>
                 <Button variant="outline" onClick={() => setJoinDialogOpen(true)}>
-                  Join League
+                  Deltag i Liga
                 </Button>
               </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(leagues ?? []).map((league) => (
-              <Card
-                key={league.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer hover:bg-muted/40"
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  navigate(`/leagues/${league.id}/members`);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    navigate(`/leagues/${league.id}/members`);
-                  }
-                }}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
-                        <Trophy className="h-5 w-5" />
-                        {league.name}
-                        {league.is_admin && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/leagues/${league.id}/members`); }}
-                            className="relative inline-flex items-center justify-center p-1 rounded hover:bg-blue-50 transition-colors"
-                            title={`Admin panel ${(league?.pending_requests_count ?? 0) > 0 ? `- ${league.pending_requests_count} pending requests` : ''}`}
-                          >
-                            <Crown className="h-4 w-4 text-blue-600" />
-                            {(league?.pending_requests_count ?? 0) > 0 && (
-                              <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-                                {(league?.pending_requests_count ?? 0) > 9 ? '9+' : league?.pending_requests_count ?? 0}
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        {league.description || 'No description'}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        Members
-                      </span>
-                      <span className="font-medium">
-                        {league?.member_count ?? 0} / {league?.max_members ?? 0}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Role</span>
-                      <Badge variant={league.role === 'owner' ? 'default' : 'secondary'}>
-                        {league.role}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Invite Code</span>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {league.invite_code}
-                      </Badge>
-                    </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {leagues.map((league) => {
+              const activeGame = activeGames[league.id];
+              const memberCount = league.member_count ?? 0;
+              const pendingRequests = league.pending_requests_count ?? 0;
+              const showPendingBadge = league.is_admin && pendingRequests > 0;
+              const pendingBadgeLabel = formatPendingCount(pendingRequests);
+              const memberStats = `${memberCount} / ${league.max_members ?? 0}`;
 
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/leagues/${league.id}/members`) }}
-                        className="flex-1 relative"
-                      >
-                        <Users className="h-4 w-4 mr-1" />
-                        Se liga
-                        {league?.is_admin && (league?.pending_requests_count ?? 0) > 0 && (
-                          <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                            {(league?.pending_requests_count ?? 0) > 9 ? '9+' : league?.pending_requests_count ?? 0}
-                          </span>
-                        )}
-                      </Button>
+              const handleNavigateToLeague = () => {
+                navigate(`/leagues/${league.id}/members`);
+              };
 
-                      {/* Show Start Game CTA for all members when setup game exists */}
-                      {activeGames[league.id] && (activeGames[league.id] as any)?.status === 'setup' ? (
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const game = activeGames[league.id] as any;
-                            navigate(`/games/${game.id}/setup`);
-                          }}
-                          className="flex-1"
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          Start Game
-                        </Button>
-                      ) : league.is_admin ? (
-                        <Button
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); handleGameButtonClick(league); }}
-                          className="flex-1"
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          {activeGames[league.id] ? 'Gå til spillet' : 'Games'}
-                        </Button>
-                      ) : activeGames[league.id] ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const game = activeGames[league.id] as any;
-                            navigate(`/games/${game.id}`);
-                          }}
-                          className="flex-1"
-                        >
-                          <Trophy className="h-4 w-4 mr-1" />
-                          Vis Spil
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled
-                          className="flex-1"
-                        >
-                          <Clock className="h-4 w-4 mr-1" />
-                          Afventer spil
-                        </Button>
-                      )}
+              return (
+                <Card
+                  key={league.id}
+                  className="hover:shadow-lg transition-shadow cursor-pointer hover:bg-muted/40"
+                  role="button"
+                  tabIndex={0}
+                  onClick={handleNavigateToLeague}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleNavigateToLeague();
+                    }
+                  }}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="flex items-center gap-2">
+                          <Trophy className="h-5 w-5" />
+                          {league.name}
+                          {league.is_admin && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleNavigateToLeague();
+                              }}
+                              className="relative inline-flex items-center justify-center p-1 rounded hover:bg-blue-50 transition-colors"
+                              title={
+                                pendingRequests > 0
+                                  ? `Admin panel - ${pendingRequests} afventende anmodninger`
+                                  : "Admin panel"
+                              }
+                            >
+                              <Crown className="h-4 w-4 text-blue-600" />
+                              {showPendingBadge && (
+                                <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                                  {pendingBadgeLabel}
+                                </span>
+                              )}
+                            </button>
+                          )}
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          {league.description || "Ingen beskrivelse"}
+                        </CardDescription>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          Medlemmer
+                        </span>
+                        <span className="font-medium">{memberStats}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Rolle</span>
+                        <Badge variant={league.role === "owner" ? "default" : "secondary"}>
+                          {league.role}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Invitationskode</span>
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {league.invite_code}
+                        </Badge>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleNavigateToLeague();
+                          }}
+                          className="flex-1 relative"
+                        >
+                          <Users className="h-4 w-4 mr-1" />
+                          Se liga
+                          {showPendingBadge && (
+                            <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                              {pendingBadgeLabel}
+                            </span>
+                          )}
+                        </Button>
+
+                        {renderGameAction(league, activeGame)}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
-        {/* League Directory */}
         <div className="space-y-4">
           <LeagueDirectory />
         </div>
 
-        {/* Games Dialog - Direct Create Mode */}
         {selectedLeagueId && (
           <GameManagement
             leagueId={selectedLeagueId}
-            isAdmin={leagues.find(l => l.id === selectedLeagueId)?.is_admin || false}
+            isAdmin={selectedLeague?.is_admin ?? false}
             autoOpenCreate
             open={gameDialogOpen}
             onOpenChange={(open) => {
               setGameDialogOpen(open);
               if (!open) {
-                setSelectedLeagueId('');
+                setSelectedLeagueId("");
               }
             }}
           />
         )}
-
-        {/* Admin Request Panel */}
-        <AdminRequestPanel 
-          isOpen={requestPanelOpen}
-          onOpenChange={setRequestPanelOpen}
-          leagueId={selectedLeagueId}
-          leagueName={selectedLeagueName}
-        />
       </div>
     </Layout>
   );
-}
+};
+
+export default LeaguesPage;
