@@ -1,5 +1,5 @@
 // Simple deployment script for Supabase Edge Function transfer-activity
-// Reads code from supabase/functions/transfer-activity/index.ts and PATCHes via Management API
+// Reads code from infra/supabase/functions/transfer-activity/index.ts and PATCHes via Management API
 import fs from 'fs';
 
 const PROJECT_REF = 'ojjpslrhyutizwpvvngu';
@@ -19,7 +19,7 @@ function readAccessToken() {
 
 async function main() {
   const token = readAccessToken();
-  const source = fs.readFileSync('supabase/functions/transfer-activity/index.ts', 'utf8');
+  const source = fs.readFileSync('infra/supabase/functions/transfer-activity/index.ts', 'utf8');
   const body = JSON.stringify({ source, body: source, verify_jwt: true, import_map: '{}' });
 
   // Try PATCH to update existing

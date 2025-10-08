@@ -24,7 +24,7 @@ async function executeDDL() {
     console.log('✅ Connected successfully');
 
     // Read the migration file
-    const migrationPath = './supabase/migrations/20250901151504_add_included_in_game_column.sql';
+    const migrationPath = './infra/supabase/migrations/20250901151504_add_included_in_game_column.sql';
     const sql = fs.readFileSync(migrationPath, 'utf8');
     
     console.log('🔄 Executing migration...');

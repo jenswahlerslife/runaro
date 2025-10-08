@@ -85,7 +85,9 @@
       "Bash(git log:*)",
       "Bash(npx wrangler@3.78.0 pages deploy dist --project-name runaro)",
       "Bash(npx wrangler:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git remote add:*)",
+      "Bash(git remote rename:*)"
     ],
     "deny": [],
     "ask": []

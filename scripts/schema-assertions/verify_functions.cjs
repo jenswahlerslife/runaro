@@ -114,7 +114,7 @@ async function verifyFunctions() {
       console.log('❌ ASSERTION FAILURES DETECTED');
       console.log('One or more functions have broken auth patterns');
       console.log('');
-      console.log('To fix: Run migrations in supabase/migrations/ with timestamps');
+      console.log('To fix: Run migrations in infra/supabase/migrations/ with timestamps');
       console.log('after 20260101000006 (the rollup migration)');
     } else {
       console.log('⚠️  ERRORS OCCURRED');

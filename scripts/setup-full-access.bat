@@ -12,19 +12,19 @@ echo 📡 Project: %SUPABASE_PROJECT_REF%
 echo.
 
 echo 🔐 Logging in to Supabase CLI...
-npx supabase login --token %SUPABASE_ACCESS_TOKEN%
+npx supabase --config infra/supabase/config.toml login --token %SUPABASE_ACCESS_TOKEN%
 
 echo.
 echo 🔗 Linking to project...
-npx supabase link --project-ref %SUPABASE_PROJECT_REF% -p %SUPABASE_DB_PASSWORD%
+npx supabase --config infra/supabase/config.toml link --project-ref %SUPABASE_PROJECT_REF% -p %SUPABASE_DB_PASSWORD%
 
 echo.
 echo 📊 Getting project status...
-npx supabase status
+npx supabase --config infra/supabase/config.toml status
 
 echo.
 echo 📋 Listing migrations...
-npx supabase migration list
+npx supabase --config infra/supabase/config.toml migration list
 
 echo.
 echo ✅ Full access setup complete!

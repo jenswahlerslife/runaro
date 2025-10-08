@@ -50,11 +50,11 @@ echo "3. Verificer at hardkodede secrets er fjernet fra kode"
 # Tjek for hardkodede secrets
 echo ""
 echo "🔍 Tjekker for hardkodede secrets i koden..."
-if grep -r "eyJhbGciOiJIUzI1NiJ9" supabase/functions/ 2>/dev/null; then
+if grep -r "eyJhbGciOiJIUzI1NiJ9" infra/supabase/functions/ 2>/dev/null; then
     echo "❌ ADVARSEL: Fandt hardkodede JWT tokens!"
 fi
 
-if grep -r "1b87ab9bffbda09608bda2bdc9e5d2036f0ddfd6" supabase/functions/ 2>/dev/null; then
+if grep -r "1b87ab9bffbda09608bda2bdc9e5d2036f0ddfd6" infra/supabase/functions/ 2>/dev/null; then
     echo "❌ ADVARSEL: Fandt hardkodede Strava secrets!"
 fi
 

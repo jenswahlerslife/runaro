@@ -12,7 +12,7 @@ async function executeMigrations() {
   console.log('=================================');
 
   // Get all migration files in order
-  const migrationsDir = './supabase/migrations';
+  const migrationsDir = './infra/supabase/migrations';
   const migrationFiles = fs.readdirSync(migrationsDir)
     .filter(file => file.endsWith('.sql'))
     .sort();

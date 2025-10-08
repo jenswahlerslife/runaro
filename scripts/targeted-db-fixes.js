@@ -157,7 +157,7 @@ class DatabaseFixer {
     console.log('\n📋 ANALYZING MIGRATION COMPLEXITY...');
 
     // Check for recent problematic migrations
-    const migrationDir = './supabase/migrations/';
+    const migrationDir = './infra/supabase/migrations/';
     const fs = await import('fs');
     const files = fs.readdirSync(migrationDir);
 

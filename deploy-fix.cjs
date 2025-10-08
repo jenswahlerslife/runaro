@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Create a temporary version with hardcoded credentials for deployment
-const functionPath = path.join(__dirname, 'supabase/functions/strava-auth/index.ts');
+const functionPath = path.join(__dirname, 'infra', 'supabase', 'functions', 'strava-auth', 'index.ts');
 const originalContent = fs.readFileSync(functionPath, 'utf8');
 
 console.log('Creating deployment-ready function...');

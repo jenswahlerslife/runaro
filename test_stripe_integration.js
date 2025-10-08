@@ -141,7 +141,7 @@ async function testStripeIntegration() {
         console.log(`3. URL: ${process.env.SUPABASE_URL}/functions/v1/stripe-webhook`);
         console.log('4. Select events: customer.subscription.*, invoice.payment_*');
         console.log('5. Update STRIPE_WEBHOOK_SECRET in .env.local');
-        console.log('6. Redeploy functions: npx supabase functions deploy');
+        console.log('6. Redeploy functions: npx supabase --config infra/supabase/config.toml functions deploy');
       }
     } else {
       console.log('❌ Missing required environment variables');

@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const WORKERS_SRC_DIR = path.join(__dirname, '../src/workers');
-const WORKERS_DIST_DIR = path.join(__dirname, '../workers');
+const WORKERS_DIST_DIR = path.join(__dirname, '../infra/cloudflare/workers');
 
 // Mock TypeScript compilation for now - in a real implementation,
 // this would use TypeScript compiler API or esbuild
@@ -66,7 +66,7 @@ function main() {
 
   console.log('✅ Worker build complete!');
   console.log('\nNext steps:');
-  console.log('1. Deploy with: wrangler deploy workers/game-finish-cron.wrangler.toml');
+  console.log('1. Deploy with: wrangler deploy infra/cloudflare/workers/game-finish-cron.wrangler.toml');
   console.log('2. Set secrets with: wrangler secret put CRON_SECRET');
 }
 

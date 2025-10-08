@@ -11,7 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 async function runMigration() {
   try {
     console.log('Reading migration file...');
-    const migrationSQL = fs.readFileSync('./supabase/migrations/20250904120000_add_display_name_and_age_to_profiles.sql', 'utf8');
+    const migrationSQL = fs.readFileSync('./infra/supabase/migrations/20250904120000_add_display_name_and_age_to_profiles.sql', 'utf8');
     
     console.log('Executing migration SQL...');
     

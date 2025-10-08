@@ -13,11 +13,11 @@ echo "🚀 Starting Edge Function deployment..."
 # Method 1: Try Supabase CLI
 echo "📝 Method 1: Supabase CLI"
 npx supabase login --token $SUPABASE_ACCESS_TOKEN || echo "Login failed"
-npx supabase functions deploy transfer-activity --project-ref $SUPABASE_PROJECT_REF || echo "CLI deployment failed"
+npx supabase --config infra/supabase/config.toml functions deploy transfer-activity --project-ref $SUPABASE_PROJECT_REF || echo "CLI deployment failed"
 
 # Method 2: Try curl with different endpoints
 echo "📝 Method 2: Direct API calls"
-FUNCTION_CODE=$(cat supabase/functions/transfer-activity/index.ts | jq -Rs .)
+FUNCTION_CODE=$(cat infra/supabase/functions/transfer-activity/index.ts | jq -Rs .)
 
 curl -X PATCH "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/functions/transfer-activity" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \

@@ -240,7 +240,7 @@ class DatabaseHealthAnalyzer {
     console.log('\n📋 ANALYZING MIGRATION HISTORY...');
 
     // Count migration files
-    const migrationFiles = fs.readdirSync('./supabase/migrations/');
+    const migrationFiles = fs.readdirSync('./infra/supabase/migrations/');
     console.log(`   📁 Total migrations: ${migrationFiles.length}`);
 
     if (migrationFiles.length > 50) {

@@ -4,7 +4,7 @@ REM Deploy import-recent-activities with environment variables
 set SUPABASE_ACCESS_TOKEN=sbp_38d564351d1f0f43a23413c6e527faf2d255e858
 
 echo Setting environment variables for import-recent-activities...
-npx supabase secrets set ^
+npx supabase --config infra/supabase/config.toml secrets set ^
   SUPABASE_URL=https://ojjpslrhyutizwpvvngu.supabase.co ^
   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzAyNDUsImV4cCI6MjA3MTgwNjI0NX0.qsKY1YPBaphie0BwV71-kHcg73ZfKNuBUHR9yHO78zA ^
   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qanBzbHJoeXV0aXp3cHZ2bmd1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjIzMDI0NSwiZXhwIjoyMDcxODA2MjQ1fQ.Wm6AbiLNjIVM-T4a7TUhBMphb5EW9fMMLJC9-wSJNS4 ^
@@ -12,6 +12,6 @@ npx supabase secrets set ^
   STRAVA_CLIENT_SECRET=d53b0e3abd31b9a2e2be82da8fd79cfee8c38dd7
 
 echo Deploying function...
-npx supabase functions deploy import-recent-activities --no-verify-jwt
+npx supabase --config infra/supabase/config.toml functions deploy import-recent-activities --no-verify-jwt
 
 echo Done!
