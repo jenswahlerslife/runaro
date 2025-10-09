@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminPostList } from "@/components/blog/AdminPostList";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Home } from "lucide-react";
 
 const AdminBlog = () => {
   const { user, loading } = useAuth();
@@ -39,10 +39,16 @@ const AdminBlog = () => {
               Administrer dine blog-opslag
             </p>
           </div>
-          <Button onClick={() => navigate("/admin/blog/opret")} size="lg">
-            <PlusCircle className="mr-2 w-5 h-5" />
-            Nyt opslag
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/")} variant="outline" size="lg">
+              <Home className="mr-2 w-5 h-5" />
+              Til forsiden
+            </Button>
+            <Button onClick={() => navigate("/admin/blog/opret")} size="lg">
+              <PlusCircle className="mr-2 w-5 h-5" />
+              Nyt opslag
+            </Button>
+          </div>
         </div>
 
         <AdminPostList />
