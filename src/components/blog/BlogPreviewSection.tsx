@@ -57,19 +57,19 @@ export const BlogPreviewSection = () => {
   return (
     <section className="rounded-[40px] bg-[#1a1a1a] text-slate-50 shadow-[0_35px_120px_-70px_rgba(0,0,0,0.5)]">
       <div className="px-6 py-10 sm:px-10 sm:py-12 xl:px-16">
-        <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.35em] text-slate-500">
+        <header className="flex flex-col gap-6">
+          <div className="text-center">
+            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.35em] text-[#3b82f6]">
               RUNARO STORIES
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
               Urban running culture i København
             </h2>
-            <p className="mt-4 max-w-2xl text-base text-slate-400 sm:text-lg">
+            <p className="mt-4 mx-auto max-w-2xl text-base text-slate-400 sm:text-lg">
               Fra brostensintervaller på Nørrebro til sunrise runs ved havnen. Vi deler fortællinger, taktikker og oplevelser fra Runaro fællesskabet.
             </p>
           </div>
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <div className="relative w-full sm:w-72">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <Input
@@ -79,8 +79,8 @@ export const BlogPreviewSection = () => {
                 className="border-slate-800 bg-[#242424] pl-9 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-700"
               />
             </div>
-            <Button variant="secondary" asChild className="bg-white text-slate-900 hover:bg-white/90">
-              <Link to="/blog">Se alle historier</Link>
+            <Button variant="secondary" asChild className="bg-white text-slate-900 hover:bg-white/90 w-full sm:w-auto">
+              <Link to="/blog">Tilbage til forsiden</Link>
             </Button>
           </div>
         </header>
