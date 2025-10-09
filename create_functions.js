@@ -17,7 +17,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function createFunctions() {
-  const functionsFile = path.join(__dirname, 'supabase', 'migrations', '20250901170001_create_league_functions.sql');
+  const functionsFile = path.join(__dirname, 'infra', 'supabase', 'migrations', '20250901170001_create_league_functions.sql');
   
   if (!fs.existsSync(functionsFile)) {
     console.log('❌ Functions migration file not found');

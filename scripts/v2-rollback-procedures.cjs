@@ -276,7 +276,7 @@ class V2RollbackManager {
     // Clean up any V2.0-specific artifacts
     // In this case, the main artifacts are the export files
     try {
-      const exportDir = path.join(process.cwd(), 'v2-export');
+      const exportDir = path.join(process.cwd(), 'infra', 'supabase', 'v2-export');
       if (fs.existsSync(exportDir)) {
         // Don't actually delete - just log that we would
         this.addRollbackLog('cleanup', `V2.0 export directory preserved for reference: ${exportDir}`);

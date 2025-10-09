@@ -23,7 +23,7 @@ class EdgeFunctionDeployer {
    * Read Edge Function source code
    */
   readFunctionCode(functionName) {
-    const functionPath = path.join(__dirname, '..', 'supabase', 'functions', functionName, 'index.ts');
+    const functionPath = path.join(__dirname, '..', 'infra', 'supabase', 'functions', functionName, 'index.ts');
     if (!fs.existsSync(functionPath)) {
       throw new Error(`Function ${functionName} not found at ${functionPath}`);
     }
@@ -101,7 +101,7 @@ class EdgeFunctionDeployer {
   async deployAllFunctions() {
     console.log('🚀 Deploying all Edge Functions...');
 
-    const functionsDir = path.join(__dirname, '..', 'supabase', 'functions');
+    const functionsDir = path.join(__dirname, '..', 'infra', 'supabase', 'functions');
     const functionDirs = fs.readdirSync(functionsDir, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => dirent.name);

@@ -28,7 +28,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 class V2SchemaExporter {
   constructor() {
-    this.outputDir = path.join(process.cwd(), 'v2-export');
+    this.outputDir = path.join(process.cwd(), 'infra', 'supabase', 'v2-export');
     this.schemaAnalysis = {
       tables: [],
       functions: [],

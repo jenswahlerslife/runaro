@@ -214,8 +214,8 @@ curl -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/functio
 echo "✅ Deployment script completed - check results above"
 `;
 
-    fs.writeFileSync(path.join(__dirname, '..', 'deploy-edge-functions.sh'), deployScript);
-    fs.writeFileSync(path.join(__dirname, '..', 'deploy-edge-functions.bat'), deployScript.replace('#!/bin/bash', '@echo off'));
+    fs.writeFileSync(path.join(__dirname, '..', 'scripts', 'linux', 'deploy-edge-functions.sh'), deployScript);
+    fs.writeFileSync(path.join(__dirname, '..', 'scripts', 'windows', 'deploy-edge-functions.bat'), deployScript.replace('#!/bin/bash', '@echo off'));
 
     console.log('✅ Deployment scripts created');
   }

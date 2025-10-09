@@ -303,7 +303,7 @@ class DatabaseAnalyzer {
     };
 
     // Save detailed report
-    const reportPath = path.join(process.cwd(), 'supabase-full-analysis.json');
+    const reportPath = path.join(process.cwd(), 'infra', 'supabase', 'reports', 'supabase-full-analysis.json');
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
 
     // Print summary

@@ -91,7 +91,7 @@ $$;
 
 async function createLeagueFunctions() {
   // Read the functions migration file
-  const functionsFile = path.join(__dirname, 'supabase', 'migrations', '20250901170001_create_league_functions.sql');
+  const functionsFile = path.join(__dirname, 'infra', 'supabase', 'migrations', '20250901170001_create_league_functions.sql');
   
   if (!fs.existsSync(functionsFile)) {
     console.log('❌ Functions migration file not found');

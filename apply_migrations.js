@@ -18,7 +18,7 @@ const migrationFiles = [
 
 async function applyMigrations() {
   for (const file of migrationFiles) {
-    const filePath = path.join(__dirname, 'supabase', 'migrations', file);
+    const filePath = path.join(__dirname, 'infra', 'supabase', 'migrations', file);
     
     if (!fs.existsSync(filePath)) {
       console.log(`⚠️  Migration file ${file} not found, skipping...`);

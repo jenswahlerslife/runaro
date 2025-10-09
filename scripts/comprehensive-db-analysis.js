@@ -282,7 +282,7 @@ class DatabaseHealthAnalyzer {
     };
 
     // Save detailed report
-    fs.writeFileSync('./supabase-health-report.json', JSON.stringify(report, null, 2));
+    fs.writeFileSync('./infra/supabase/reports/supabase-health-report.json', JSON.stringify(report, null, 2));
 
     console.log('\n🎯 FINAL ASSESSMENT');
     console.log('='.repeat(40));
@@ -313,7 +313,7 @@ class DatabaseHealthAnalyzer {
       });
     }
 
-    console.log('\n📄 Detailed report saved to: supabase-health-report.json');
+    console.log('\n📄 Detailed report saved to: infra/supabase/reports/supabase-health-report.json');
   }
 
   calculateOverallHealth() {

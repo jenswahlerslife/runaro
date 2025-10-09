@@ -45,29 +45,29 @@ async function executeViaSupabaseCLI() {
         // Try multiple approaches with Supabase CLI
         const approaches = [
             // Approach 1: Direct SQL execution
-            ['npx', 'supabase', 'db', 'push', '--include-seed', '--password', 'Jzu37nnq!123456'],
+            ['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'db', 'push', '--include-seed', '--password', 'Jzu37nnq!123456'],
 
             // Approach 2: SQL file execution
-            ['npx', 'supabase', 'db', 'reset', '--linked'],
+            ['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'db', 'reset', '--linked'],
 
             // Approach 3: Migration creation and push
-            ['npx', 'supabase', 'migration', 'new', 'add_user_activities_columns']
+            ['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'migration', 'new', 'add_user_activities_columns']
         ];
 
         // First, try to login and link
         console.log('🔐 Logging in to Supabase...');
-        await executeCommand(['npx', 'supabase', 'login', '--token', 'sbp_4d1e6b1e1b73bdf1b092c04bfa1336a005576207']);
+        await executeCommand(['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'login', '--token', 'sbp_4d1e6b1e1b73bdf1b092c04bfa1336a005576207']);
 
         console.log('🔗 Linking to project...');
-        await executeCommand(['npx', 'supabase', 'link', '--project-ref', 'ojjpslrhyutizwpvvngu']);
+        await executeCommand(['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'link', '--project-ref', 'ojjpslrhyutizwpvvngu']);
 
         // Create a new migration with our SQL
         console.log('📋 Creating migration...');
-        const migrationResult = await executeCommand(['npx', 'supabase', 'migration', 'new', 'add_user_activities_columns']);
+        const migrationResult = await executeCommand(['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'migration', 'new', 'add_user_activities_columns']);
 
         if (migrationResult.success) {
             // Find the created migration file and write our SQL to it
-            const migrationsDir = path.join(__dirname, 'supabase', 'migrations');
+            const migrationsDir = path.join(__dirname, 'infra', 'supabase', 'migrations');
             if (fs.existsSync(migrationsDir)) {
                 const migrationFiles = fs.readdirSync(migrationsDir)
                     .filter(f => f.includes('add_user_activities_columns'))
@@ -81,7 +81,7 @@ async function executeViaSupabaseCLI() {
 
                     // Push the migration
                     console.log('🚀 Pushing migration to production...');
-                    const pushResult = await executeCommand(['npx', 'supabase', 'db', 'push', '--password', 'Jzu37nnq!123456']);
+                    const pushResult = await executeCommand(['npx', 'supabase', '--config', 'infra/supabase/config.toml', 'db', 'push', '--password', 'Jzu37nnq!123456']);
 
                     if (pushResult.success) {
                         console.log('🎉 SUCCESS! Migration pushed successfully!');
