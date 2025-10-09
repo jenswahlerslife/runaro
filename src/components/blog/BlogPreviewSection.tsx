@@ -55,8 +55,8 @@ export const BlogPreviewSection = () => {
   }, [posts, searchQuery]);
 
   return (
-    <section className="rounded-[40px] bg-[#1a1a1a] text-slate-50 shadow-[0_35px_120px_-70px_rgba(0,0,0,0.5)]">
-      <div className="px-6 py-10 sm:px-10 sm:py-12 xl:px-16">
+    <section className="rounded-[32px] bg-[#1a1a1a] text-slate-50 shadow-[0_35px_120px_-70px_rgba(0,0,0,0.5)]">
+      <div className="p-10">
         <header className="flex flex-col gap-6">
           <div className="text-center">
             <p className="text-[0.8rem] font-semibold uppercase tracking-[0.35em] text-[#3b82f6]">

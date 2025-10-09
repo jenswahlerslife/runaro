@@ -69,7 +69,7 @@ const Index = () => {
       <div className="flex flex-col items-center gap-16 pb-12">
         <HeroSection />
 
-        <section className="w-full max-w-6xl">
+        <section className="w-full max-w-5xl">
           <BlogPreviewSection />
         </section>
       </div>
