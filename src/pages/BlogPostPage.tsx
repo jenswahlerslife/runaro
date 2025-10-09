@@ -76,11 +76,11 @@ const BlogPostPage = () => {
   }
 
   return (
-    <Layout>
+    <Layout backgroundClassName="bg-[#1a1a1a]">
       <article className="mx-auto flex w-full max-w-4xl flex-col gap-8">
         <Link
           to="/blog"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-primary"
+          className="inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Tilbage til alle historier
@@ -99,15 +99,15 @@ const BlogPostPage = () => {
         <header className="space-y-6">
           <div className="flex flex-wrap gap-2">
             {post.tags.map((tag) => (
-              <Badge key={`${post.id}-${tag}`} variant="secondary">
+              <Badge key={`${post.id}-${tag}`} variant="secondary" className="bg-slate-800 text-slate-300 border-slate-700">
                 {tag}
               </Badge>
             ))}
           </div>
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             {post.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
             {formattedDate && <time>{formattedDate}</time>}
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
@@ -116,7 +116,7 @@ const BlogPostPage = () => {
             {post.author && (
               <span>
                 Skrevet af{" "}
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-slate-300">
                   {post.author.display_name ?? post.author.username ?? "Runaro"}
                 </span>
               </span>
@@ -124,7 +124,7 @@ const BlogPostPage = () => {
           </div>
         </header>
 
-        <div className="prose prose-lg max-w-none dark:prose-invert prose-headings:font-semibold prose-a:text-primary">
+        <div className="prose prose-lg max-w-none prose-invert prose-headings:font-semibold prose-headings:text-white prose-p:text-slate-300 prose-a:text-blue-400 prose-strong:text-white prose-li:text-slate-300">
           <ReactMarkdown>{post.content}</ReactMarkdown>
         </div>
       </article>

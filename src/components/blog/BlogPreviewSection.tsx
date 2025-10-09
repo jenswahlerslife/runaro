@@ -55,17 +55,17 @@ export const BlogPreviewSection = () => {
   }, [posts, searchQuery]);
 
   return (
-    <section className="rounded-[40px] bg-gradient-to-b from-[#0b1124] via-[#070d1c] to-[#030813] text-slate-50 shadow-[0_35px_120px_-70px_rgba(5,12,33,0.9)] ring-1 ring-inset ring-white/5">
+    <section className="rounded-[40px] bg-[#1a1a1a] text-slate-50 shadow-[0_35px_120px_-70px_rgba(0,0,0,0.5)]">
       <div className="px-6 py-10 sm:px-10 sm:py-12 xl:px-16">
         <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.35em] text-blue-300">
+            <p className="text-[0.8rem] font-semibold uppercase tracking-[0.35em] text-slate-500">
               RUNARO STORIES
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
               Urban running culture i København
             </h2>
-            <p className="mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
+            <p className="mt-4 max-w-2xl text-base text-slate-400 sm:text-lg">
               Fra brostensintervaller på Nørrebro til sunrise runs ved havnen. Vi deler fortællinger, taktikker og oplevelser fra Runaro fællesskabet.
             </p>
           </div>
@@ -76,7 +76,7 @@ export const BlogPreviewSection = () => {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Søg i opslag eller tags..."
-                className="border-white/10 bg-white/5 pl-9 text-slate-100 placeholder:text-slate-500 focus-visible:ring-offset-0"
+                className="border-slate-800 bg-[#242424] pl-9 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-700"
               />
             </div>
             <Button variant="secondary" asChild className="bg-white text-slate-900 hover:bg-white/90">
@@ -91,7 +91,7 @@ export const BlogPreviewSection = () => {
               {Array.from({ length: SKELETON_PLACEHOLDER_COUNT }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="h-64 animate-pulse rounded-2xl bg-slate-900/80"
+                  className="h-64 animate-pulse rounded-2xl bg-[#242424]"
                 />
               ))}
             </div>
@@ -100,7 +100,7 @@ export const BlogPreviewSection = () => {
               {error}
             </div>
           ) : filteredPosts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-700 px-4 py-10 text-center text-sm text-slate-400">
+            <div className="rounded-lg border border-dashed border-slate-800 px-4 py-10 text-center text-sm text-slate-500">
               {searchQuery ? EMPTY_STATE_MESSAGE.filtered : EMPTY_STATE_MESSAGE.default}
             </div>
           ) : (

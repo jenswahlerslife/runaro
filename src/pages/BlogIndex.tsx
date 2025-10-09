@@ -44,54 +44,46 @@ const BlogIndex = () => {
   }, [posts, searchQuery]);
 
   return (
-    <Layout>
+    <Layout backgroundClassName="bg-[#1a1a1a]">
       <div className="space-y-12">
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-8 py-16 text-slate-100 shadow-2xl ring-1 ring-white/10">
-          <div className="relative mx-auto max-w-3xl space-y-6 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-400">
-              Runaro Stories
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-              Urban running culture i København
+        <section className="space-y-8 px-8 py-16">
+          <div className="space-y-4">
+            <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl md:text-7xl">
+              Runaro
             </h1>
-            <p className="text-lg text-slate-300">
-              Fra brostensintervaller på Nørrebro til sunrise runs ved havnen.
-              Vi deler fortællinger, taktikker og oplevelser fra Runaro
-              fællesskabet.
+            <p className="max-w-2xl text-lg text-slate-400">
+              Urban running culture. Fra brostensintervaller på Nørrebro til sunrise runs ved havnen.
             </p>
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <div className="relative w-full max-w-md">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Søg i opslag eller tags..."
-                  className="border-slate-700 bg-slate-900/90 pl-9 text-slate-100 placeholder:text-slate-500"
-                />
-              </div>
-              <Button variant="secondary" asChild className="bg-white text-slate-900">
-                <Link to="/">Tilbage til forsiden</Link>
-              </Button>
+          </div>
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Søg i opslag eller tags..."
+                className="border-slate-800 bg-[#242424] pl-9 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-700"
+              />
             </div>
           </div>
         </section>
 
-        <section>
+        <section className="px-8">
           {loading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="h-64 animate-pulse rounded-2xl bg-slate-200/60 dark:bg-slate-800/60"
+                  className="h-64 animate-pulse rounded-2xl bg-[#242424]"
                 />
               ))}
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100">
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-6 text-sm text-red-200">
               {error}
             </div>
           ) : filteredPosts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 p-10 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="rounded-lg border border-dashed border-slate-800 p-10 text-center text-slate-500">
               {searchQuery
                 ? "Ingen opslag matcher din søgning endnu."
                 : "Ingen opslag endnu. Når de publiceres, vises de her."}
