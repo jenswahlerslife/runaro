@@ -82,6 +82,7 @@ function mapPost(row: any): BlogPost {
 }
 
 export async function fetchPublishedBlogPosts(): Promise<BlogPost[]> {
+  // Primary: new blog_posts table
   const { data, error } = await supabase
     .from(BLOG_TABLE)
     .select(
@@ -94,7 +95,22 @@ export async function fetchPublishedBlogPosts(): Promise<BlogPost[]> {
     throw new Error(buildErrorMessage(error));
   }
 
-  return (data ?? []).map(mapPost);
+  // If no rows found in blog_posts, fall back to legacy posts table
+  if (!data || data.length === 0) {
+    const { data: legacy, error: legacyError } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+
+    if (legacyError) {
+      throw new Error(buildErrorMessage(legacyError));
+    }
+
+    return (legacy ?? []).map(mapPost);
+  }
+
+  return data.map(mapPost);
 }
 
 export async function fetchAllBlogPosts(): Promise<BlogPost[]> {

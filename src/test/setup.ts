@@ -109,11 +109,10 @@ vi.mock('@/integrations/supabase/client', () => ({
 // Mock React Router
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
+  return Object.assign({}, actual as any, {
     useNavigate: vi.fn(),
     useParams: vi.fn(),
     useLocation: vi.fn(() => ({ pathname: '/' })),
     Link: vi.fn(({ children }) => children)
-  };
+  });
 });
