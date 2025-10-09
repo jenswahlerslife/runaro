@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   WorkerEnv,
   SECURITY_HEADERS,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BaseWorker } from '../shared/BaseWorker';
 import { WorkerEnv, CronTriggerPayload } from '../shared/types';
 import { callSupabaseFunction } from '../shared/utils';

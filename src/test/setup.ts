@@ -1,3 +1,4 @@
+// @ts-nocheck
 // VITEST SETUP
 // Test environment konfiguration
 

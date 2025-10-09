@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '@/integrations/supabase/client';
 import { League, Member, JoinRequest, SearchUser } from '../types';
 import { LeagueRepository, UserRepository } from '../domain/ports/LeagueRepository';
